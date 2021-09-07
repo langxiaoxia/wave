@@ -33,13 +33,7 @@ struct Converter<device::mojom::HidDeviceInfoPtr> {
     dict.Set("productName", device->product_name);
     dict.Set("deviceId", device->physical_device_id);
     dict.Set("serialNumber", device->serial_number);
-    VLOG(1) << "vendor_id: " << device->vendor_id;
-    VLOG(1) << "product_id: " << device->product_id;
-    VLOG(1) << "product_name: " << device->product_name;
-    VLOG(1) << "physical_device_id: " << device->physical_device_id;
-    VLOG(1) << "guid: " << device->guid;
-    VLOG(1) << "serial_number: " << device->serial_number;
-    VLOG(1) << "device_node: " << device->device_node;
+    dict.Set("containerId", device->physical_device_id);
     return gin::ConvertToV8(isolate, dict);
   }
 };
@@ -226,10 +220,22 @@ bool HidChooserController::AddDeviceInfo(
   auto id = PhysicalDeviceIdFromDeviceInfo(device);
   auto find_it = device_map_.find(id);
   if (find_it != device_map_.end()) {
+    DVLOG(0) << "HidChooserController::AddDeviceInfo exist id=" << id;
+    DVLOG(0) << "guid=" << device.guid;
+    DVLOG(0) << "physical_device_id=" << device.physical_device_id;
+    DVLOG(0) << "vendor_id=" << device.vendor_id;
+    DVLOG(0) << "product_id=" << device.product_id;
+    DVLOG(0) << "product_name=" << device.product_name;
     find_it->second.push_back(device.Clone());
     return false;
   }
   // A new device was connected. Append it to the end of the chooser list.
+  DVLOG(0) << "HidChooserController::AddDeviceInfo new id=" << id;
+  DVLOG(0) << "guid=" << device.guid;
+  DVLOG(0) << "physical_device_id=" << device.physical_device_id;
+  DVLOG(0) << "vendor_id=" << device.vendor_id;
+  DVLOG(0) << "product_id=" << device.product_id;
+  DVLOG(0) << "product_name=" << device.product_name;
   device_map_[id].push_back(device.Clone());
   items_.push_back(id);
   return true;

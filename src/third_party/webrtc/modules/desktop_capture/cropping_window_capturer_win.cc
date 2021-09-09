@@ -188,7 +188,12 @@ void CroppingWindowCapturerWin::CaptureFrame() {
             return true;
           });
     }
-    win_capturer->SelectSource(GetWindowToCapture());
+    WindowId on_screen_window = GetWindowToCapture();
+    if (last_window_id_ != on_screen_window) {
+      RTC_LOG(LS_WARNING) << "switch capture window " << last_window_id_ << " => " << on_screen_window;
+      last_window_id_ = on_screen_window;
+    }
+    win_capturer->SelectSource(on_screen_window);
   }
 
   CroppingWindowCapturer::CaptureFrame();

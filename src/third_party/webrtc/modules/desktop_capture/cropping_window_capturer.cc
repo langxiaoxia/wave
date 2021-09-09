@@ -21,7 +21,8 @@ namespace webrtc {
 
 CroppingWindowCapturer::CroppingWindowCapturer(
     const DesktopCaptureOptions& options)
-    : options_(options),
+    : last_window_id_(kNullWindowId),
+      options_(options),
       callback_(NULL),
       window_capturer_(DesktopCapturer::CreateRawWindowCapturer(options)),
       selected_window_(kNullWindowId),

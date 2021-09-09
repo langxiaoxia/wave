@@ -70,6 +70,8 @@ class RTC_EXPORT CroppingWindowCapturer : public DesktopCapturer,
   WindowId excluded_window() const { return excluded_window_; }
   DesktopCapturer* window_capturer() const { return window_capturer_.get(); }
 
+  WindowId last_window_id_; //+by xxlang@2021-09-09
+
  private:
   DesktopCaptureOptions options_;
   DesktopCapturer::Callback* callback_;
@@ -77,7 +79,7 @@ class RTC_EXPORT CroppingWindowCapturer : public DesktopCapturer,
   std::unique_ptr<DesktopCapturer> screen_capturer_;
   SourceId selected_window_;
   WindowId excluded_window_;
-  int last_capturer_;
+  int last_capturer_; //+by xxlang@2021-09-09
 };
 
 }  // namespace webrtc

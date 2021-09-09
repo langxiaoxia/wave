@@ -100,15 +100,16 @@ class FullScreenPowerPointHandler : public FullScreenApplicationHandler {
       return 0;
 
     HWND original_window = reinterpret_cast<HWND>(GetSourceId());
+
+    if (GetWindowType(original_window) != WindowType::kEditor)
+      return 0;
+
     DWORD process_id = WindowProcessId(original_window);
 
     DesktopCapturer::SourceList powerpoint_windows =
         GetProcessWindows(window_list, process_id, original_window);
 
     if (powerpoint_windows.empty())
-      return 0;
-
-    if (GetWindowType(original_window) != WindowType::kEditor)
       return 0;
 
     const auto original_document = GetDocumentFromEditorTitle(original_window);
@@ -121,17 +122,16 @@ class FullScreenPowerPointHandler : public FullScreenApplicationHandler {
         continue;
 
       const auto slideshow_document = GetDocumentFromSlideShowTitle(window);
+
       if (slideshow_document.empty())
         continue;
 
       if (slideshow_document == original_document)
         return source.id;
 
-      if (GetDocumentFromSlideShowTitleNew(window) == original_document)
+      if (GetDocumentFromSlideShowTitleNew(window) == original_document) //+by xxlang@2021-09-08
         return source.id;
 
-      RTC_LOG(LS_WARNING) << "original title=" << original_document;
-      RTC_LOG(LS_WARNING) << "slideshow title=" << slideshow_document;
       continue;
     }
 
@@ -299,6 +299,148 @@ std::wstring GetPathByWindowId(HWND window_id) {
   return result;
 }
 
+//+by xxlang@2021-09-08 {
+std::wstring WindowProcessName(HWND window) {
+  std::wstring exe_path = GetPathByWindowId(window);
+  std::wstring file_name = FileNameFromPath(exe_path);
+  std::transform(file_name.begin(), file_name.end(), file_name.begin(), std::towupper);
+  return file_name;
+}
+
+DesktopCapturer::SourceList GetProcessWindows(
+    const DesktopCapturer::SourceList& sources,
+    const std::wstring processName,
+    HWND window_to_exclude) {
+  DesktopCapturer::SourceList result;
+  std::copy_if(sources.begin(), sources.end(), std::back_inserter(result),
+               [&](DesktopCapturer::Source source) {
+                 const HWND source_hwnd = reinterpret_cast<HWND>(source.id);
+                 return window_to_exclude != source_hwnd && WindowProcessName(source_hwnd) == processName;
+               });
+  return result;
+}
+
+class FullScreenWPSHandler : public FullScreenApplicationHandler {
+ public:
+  explicit FullScreenWPSHandler(DesktopCapturer::SourceId sourceId)
+      : FullScreenApplicationHandler(sourceId) {}
+
+  ~FullScreenWPSHandler() override {}
+
+  DesktopCapturer::SourceId FindFullScreenWindow(
+      const DesktopCapturer::SourceList& window_list,
+      int64_t timestamp) const override {
+    if (window_list.empty())
+      return 0;
+
+    HWND original_window = reinterpret_cast<HWND>(GetSourceId());
+
+    if (GetWindowType(original_window) != WindowType::kEditor)
+      return 0;
+
+    DesktopCapturer::SourceList wpp_windows =
+        GetProcessWindows(window_list, L"WPP.EXE", original_window);
+
+    if (wpp_windows.empty())
+      return 0;
+
+    const auto original_document = GetDocumentFromEditorTitle(original_window);
+
+    for (const auto& source : wpp_windows) {
+      HWND window = reinterpret_cast<HWND>(source.id);
+
+      // Looking for slide show window for the same document
+      if (GetWindowType(window) != WindowType::kSlideShow)
+        continue;
+
+      const auto slideshow_document = GetDocumentFromSlideShowTitleNew(window);
+
+      if (slideshow_document.empty())
+        continue;
+
+      if (slideshow_document == original_document.substr(0, slideshow_document.length()))
+        return source.id;
+
+      continue;
+    }
+
+    return 0;
+  }
+
+ private:
+  enum class WindowType { kEditor, kSlideShow, kOther };
+
+  WindowType GetWindowType(HWND window) const {
+    if (IsEditorWindow(window))
+      return WindowType::kEditor;
+    else if (IsSlideShowWindow(window))
+      return WindowType::kSlideShow;
+    else
+      return WindowType::kOther;
+  }
+
+  constexpr static char kDocumentTitleSeparator[] = " - ";
+
+  std::string GetDocumentFromEditorTitle(HWND window) const {
+    std::string title = WindowText(window);
+    auto position = title.find(kDocumentTitleSeparator);
+    return rtc::string_trim(title.substr(0, position));
+  }
+
+  std::string GetDocumentFromSlideShowTitle(HWND window) const {
+    std::string title = WindowText(window);
+    auto left_pos = title.find(kDocumentTitleSeparator);
+    auto right_pos = title.rfind(kDocumentTitleSeparator);
+    constexpr size_t kSeparatorLength = arraysize(kDocumentTitleSeparator) - 1;
+    if (left_pos == std::string::npos || right_pos == std::string::npos)
+      return title;
+
+    if (right_pos > left_pos + kSeparatorLength) {
+      auto result_len = right_pos - left_pos - kSeparatorLength;
+      auto document = title.substr(left_pos + kSeparatorLength, result_len);
+      return rtc::string_trim(document);
+    } else {
+      auto document =
+          title.substr(left_pos + kSeparatorLength, std::wstring::npos);
+      return rtc::string_trim(document);
+    }
+  }
+
+  constexpr static char kDocumentTitleSeparatorLeft[] = " - [";
+  constexpr static char kDocumentTitleSeparatorRight[] = "]";
+
+  std::string GetDocumentFromSlideShowTitleNew(HWND window) const {
+    std::string title = WindowText(window);
+    auto left_pos = title.find(kDocumentTitleSeparatorLeft);
+    auto right_pos = title.rfind(kDocumentTitleSeparatorRight);
+    constexpr size_t kSeparatorLength = arraysize(kDocumentTitleSeparatorLeft) - 1;
+    if (left_pos == std::string::npos || right_pos == std::string::npos)
+      return title;
+
+    if (right_pos > left_pos + kSeparatorLength) {
+      auto result_len = right_pos - left_pos - kSeparatorLength;
+      auto document = title.substr(left_pos + kSeparatorLength, result_len);
+      return rtc::string_trim(document);
+    } else {
+      auto document =
+          title.substr(left_pos + kSeparatorLength, std::wstring::npos);
+      return rtc::string_trim(document);
+    }
+  }
+
+  bool IsEditorWindow(HWND window) const {
+    return CheckWindowClassName(window, L"PP12FrameClass");
+  }
+
+  bool IsSlideShowWindow(HWND window) const {
+    const LONG style = ::GetWindowLong(window, GWL_STYLE);
+    const bool min_box = WS_MINIMIZEBOX & style;
+    const bool max_box = WS_MAXIMIZEBOX & style;
+    return !min_box && !max_box;
+  }
+};
+//+by xxlang@2021-09-08 }
+
 }  // namespace
 
 std::unique_ptr<FullScreenApplicationHandler>
@@ -315,6 +457,8 @@ CreateFullScreenWinApplicationHandler(DesktopCapturer::SourceId source_id) {
   } else if (file_name == L"SOFFICE.BIN" &&
              absl::EndsWith(WindowText(hwnd), "OpenOffice Impress")) {
     result = std::make_unique<OpenOfficeApplicationHandler>(source_id);
+  } else if (file_name == L"WPS.EXE") {
+    result = std::make_unique<FullScreenWPSHandler>(source_id); //+by xxlang@2021-09-08
   }
 
   return result;

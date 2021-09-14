@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start-log": "electron . --enable-logging --vmodule=*/webrtc/*=1",
-    "start-v": "electron . --enable-logging --v=1",
+    "start-log": "electron . --enable-logging --v=0",
+    "start-v": "electron . --enable-logging --vmodule=*/webrtc/*=1",
     "start": "electron ."
   },
   "keywords": [],

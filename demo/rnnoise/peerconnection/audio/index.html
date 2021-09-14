@@ -10,6 +10,7 @@
 <head>
 
     <meta charset="utf-8">
+	<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
     <meta name="description" content="WebRTC code samples">
     <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
     <meta itemprop="description" content="Client-side WebRTC code samples">
@@ -20,7 +21,7 @@
 
     <base target="_blank">
 
-    <title>Peer connection: audio only</title>
+    <title>RNNoise</title>
 
     <link rel="icon" sizes="192x192" href="../../../images/webrtc-icon-192x192.png">
     <link rel="stylesheet" href="../../../css/main.css"/>
@@ -29,12 +30,12 @@
 </head>
 
 <body>
+	<h1>RNNoise</h1>
+	We are using Node.js <span id="node-version"></span>,
+	Chromium <span id="chrome-version"></span>,
+	and Electron <span id="electron-version"></span>.<hr>
 
 <div id="container">
-
-    <h1><a href="//webrtc.github.io/samples/" title="WebRTC samples homepage">WebRTC samples</a> <span>Peer connection: audio only</span>
-    </h1>
-
     <div id="audio">
         <div>
             <div class="label">Local audio:</div>
@@ -102,11 +103,9 @@
         <td>Tested in Chrome, Not tested in Opera, Firefox, Safari, Edge</td>
     </tr>
 </table>
-<hr>
-<script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+
 <script src="js/main.js"></script>
 <script src="../../../js/third_party/graph.js"></script>
 
-<script src="../../../js/lib/ga.js"></script>
 </body>
 </html>

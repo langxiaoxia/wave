@@ -8,9 +8,9 @@
     "start-log": "electron . --enable-logging --v=0",
     "start-event": "electron . --enable-logging --vmodule=device_event_log*=1",
     "start": "electron .",
-    "pack-win-x64": "electron-packager ./ webhid --platform=win32 --arch=x64 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../icon.ico --out=./out --asar --app-version=1.0.1",
-    "pack-win-x86": "electron-packager ./ webhid --platform=win32 --arch=ia32 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../icon.ico --out=./out --asar --app-version=1.0.1",
-    "pack-mac-x64": "electron-packager ./ webhid --platform=darwin --arch=x64 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../icon.ico --out=./out --asar --app-version=1.0.1"
+    "pack-win-x64": "electron-packager ./ webhid --platform=win32 --arch=x64 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../dist/icon.ico --out=./out --asar --app-version=1.0.1",
+    "pack-win-x86": "electron-packager ./ webhid --platform=win32 --arch=ia32 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../dist/icon.ico --out=./out --asar --app-version=1.0.1",
+    "pack-mac-x64": "electron-packager ./ webhid --platform=darwin --arch=x64 --electron-version=13.1.4 --electron-zip-dir=../../../dist --icon=../../../dist/icon.icns --out=./out --asar --app-version=1.0.1"
   },
   "keywords": [],
   "author": "xxlang",

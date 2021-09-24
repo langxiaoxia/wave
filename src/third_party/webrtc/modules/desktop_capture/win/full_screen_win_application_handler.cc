@@ -335,9 +335,6 @@ class FullScreenWPSHandler : public FullScreenApplicationHandler {
 
     HWND original_window = reinterpret_cast<HWND>(GetSourceId());
 
-    if (GetWindowType(original_window) != WindowType::kEditor)
-      return 0;
-
     DesktopCapturer::SourceList wpp_windows =
         GetProcessWindows(window_list, L"WPP.EXE", original_window);
 
@@ -350,15 +347,18 @@ class FullScreenWPSHandler : public FullScreenApplicationHandler {
       HWND window = reinterpret_cast<HWND>(source.id);
 
       // Looking for slide show window for the same document
-      if (GetWindowType(window) != WindowType::kSlideShow)
-        continue;
-
       const auto slideshow_document = GetDocumentFromSlideShowTitleNew(window);
 
       if (slideshow_document.empty())
         continue;
 
+      if (slideshow_document.length() > original_document.length())
+        continue;
+
       if (slideshow_document == original_document.substr(0, slideshow_document.length()))
+        return source.id;
+
+      if (slideshow_document == original_document.substr(original_document.length() - slideshow_document.length(), original_document.length()))
         return source.id;
 
       continue;
@@ -368,17 +368,6 @@ class FullScreenWPSHandler : public FullScreenApplicationHandler {
   }
 
  private:
-  enum class WindowType { kEditor, kSlideShow, kOther };
-
-  WindowType GetWindowType(HWND window) const {
-    if (IsEditorWindow(window))
-      return WindowType::kEditor;
-    else if (IsSlideShowWindow(window))
-      return WindowType::kSlideShow;
-    else
-      return WindowType::kOther;
-  }
-
   constexpr static char kDocumentTitleSeparator[] = " - ";
 
   std::string GetDocumentFromEditorTitle(HWND window) const {
@@ -426,17 +415,6 @@ class FullScreenWPSHandler : public FullScreenApplicationHandler {
           title.substr(left_pos + kSeparatorLength, std::wstring::npos);
       return rtc::string_trim(document);
     }
-  }
-
-  bool IsEditorWindow(HWND window) const {
-    return CheckWindowClassName(window, L"PP12FrameClass");
-  }
-
-  bool IsSlideShowWindow(HWND window) const {
-    const LONG style = ::GetWindowLong(window, GWL_STYLE);
-    const bool min_box = WS_MINIMIZEBOX & style;
-    const bool max_box = WS_MAXIMIZEBOX & style;
-    return !min_box && !max_box;
   }
 };
 //+by xxlang@2021-09-08 }

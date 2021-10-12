@@ -286,20 +286,20 @@ WindowCapturerWinGdi::CaptureResults WindowCapturerWinGdi::CaptureFrame(
     // Windows 8.0 vs 8.1 so a try/fallback is more approriate here.
     const UINT flags = PW_RENDERFULLCONTENT;
     result = PrintWindow(window_, mem_dc, flags);
-    RTC_LOG(LS_INFO) << "PrintWindow: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
+//    RTC_LOG(LS_INFO) << "PrintWindow: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
   }
 
   if (!result && (!window_capture_helper_.IsAeroEnabled() ||
                   !previous_size_.equals(frame->size()))) {
     result = PrintWindow(window_, mem_dc, 0);
-    RTC_LOG(LS_INFO) << "PrintWindow: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
+//    RTC_LOG(LS_INFO) << "PrintWindow: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
   }
 
   // Aero is enabled or PrintWindow() failed, use BitBlt.
   if (!result) {
     result = BitBlt(mem_dc, 0, 0, frame->size().width(), frame->size().height(),
                     window_dc, 0, 0, SRCCOPY);
-    RTC_LOG(LS_INFO) << "BitBlt: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
+//    RTC_LOG(LS_INFO) << "BitBlt: window=" << window_ << ", width=" << frame->size().width() << ", height=" << frame->size().height() << ", result=" << result;
   }
 
   SelectObject(mem_dc, previous_object);
@@ -348,7 +348,7 @@ WindowCapturerWinGdi::CaptureResults WindowCapturerWinGdi::CaptureFrame(
           HWND hwnd = *it;
           if (owned_window_capturer_->SelectSource(
                   reinterpret_cast<SourceId>(hwnd))) {
-            RTC_LOG(LS_INFO) << "owned_window_capturer: selected_window=" << window_ << ", owned_window=" << hwnd;
+//            RTC_LOG(LS_INFO) << "owned_window_capturer: selected_window=" << window_ << ", owned_window=" << hwnd;
             CaptureResults results = owned_window_capturer_->CaptureFrame(
                 /*capture_owned_windows*/ false);
 

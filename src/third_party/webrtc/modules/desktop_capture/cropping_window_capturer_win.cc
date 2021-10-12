@@ -138,7 +138,9 @@ class CroppingWindowCapturerWin : public CroppingWindowCapturer {
  public:
   explicit CroppingWindowCapturerWin(const DesktopCaptureOptions& options)
       : CroppingWindowCapturer(options),
-        full_screen_window_detector_(options.full_screen_window_detector()) {}
+        full_screen_window_detector_(options.full_screen_window_detector()) {
+    enable_border_ = true; //+by xxlang@2021-09-28
+  }
 
   void CaptureFrame() override;
 

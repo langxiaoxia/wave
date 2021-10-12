@@ -15,6 +15,7 @@
 
 #include <algorithm>
 
+#include "base/win/scoped_com_initializer.h"
 #include "modules/desktop_capture/win/scoped_gdi_object.h"
 #include "rtc_base/arraysize.h"
 #include "rtc_base/checks.h"
@@ -163,17 +164,22 @@ bool GetCroppedWindowRect(HWND window,
     // Only apply this cropping to windows with a resize border (otherwise,
     // it'd clip the edges of captured pop-up windows without this border).
     LONG style = GetWindowLong(window, GWL_STYLE);
-    if (style & WS_THICKFRAME || style & DS_MODALFRAME) {
+    if ((style & WS_THICKFRAME || style & DS_MODALFRAME) && style & WS_BORDER) { //*by xxlang@2021-10-12
       int width = GetSystemMetrics(SM_CXSIZEFRAME);
       int bottom_height = GetSystemMetrics(SM_CYSIZEFRAME);
       const int visible_border_height = GetSystemMetrics(SM_CYBORDER);
       int top_height = visible_border_height;
+      //+by xxlang@2021-10-08 {
+      if (is_maximized) {
+        top_height = bottom_height;
+      }
+      //+by xxlang@2021-10-08 }
 
       // If requested, avoid cropping the visible window border. This is used
       // for pop-up windows to include their border, but not for the outermost
       // window (where a partially-transparent border may expose the
       // background a bit).
-      if (avoid_cropping_border) {
+      if (avoid_cropping_border  && !is_maximized) { //*by xxlang@2021-10-08
         width = std::max(0, width - GetSystemMetrics(SM_CXBORDER));
         bottom_height = std::max(0, bottom_height - visible_border_height);
         top_height = 0;
@@ -380,7 +386,7 @@ void WindowCaptureHelperWin::LogWindow(HWND hwnd, const char* prefix) {
   char* ansi_window_title = ansi_empty;
   char* ansi_class_name = ansi_empty;
   
-  const LONG exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+//  const LONG exstyle = GetWindowLong(hwnd, GWL_EXSTYLE);
 
   const size_t kTitleLength = 256;
   WCHAR window_title[kTitleLength];
@@ -400,7 +406,7 @@ void WindowCaptureHelperWin::LogWindow(HWND hwnd, const char* prefix) {
     ansi_class_name[ansi_length] = 0;
   }
 
-  RTC_LOG(LS_INFO) << prefix << ": hwnd=" << hwnd << ", window_title=" << ansi_window_title << ", class_name=" << ansi_class_name << ", exstyle=" << exstyle;
+//  RTC_LOG(LS_INFO) << prefix << ": hwnd=" << hwnd << ", window_title=" << ansi_window_title << ", class_name=" << ansi_class_name << ", exstyle=" << exstyle;
 
   if (ansi_window_title != ansi_empty) {
     delete[] ansi_window_title;
@@ -468,6 +474,7 @@ bool WindowCaptureHelperWin::IsWindowOnCurrentDesktop(HWND hwnd) {
   // Make sure the window is on the current virtual desktop.
   if (virtual_desktop_manager_) {
     BOOL on_current_desktop;
+    base::win::ScopedCOMInitializer com_initializer(base::win::ScopedCOMInitializer::kMTA); //+by xxlang@2021-10-12
     if (SUCCEEDED(virtual_desktop_manager_->IsWindowOnCurrentVirtualDesktop(
             hwnd, &on_current_desktop)) &&
         !on_current_desktop) {

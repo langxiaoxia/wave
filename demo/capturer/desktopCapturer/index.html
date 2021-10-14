@@ -3,28 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <title>Desktop Capturer</title>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/bulma@0.8.0/css/bulma.min.css"
-    />
-    <link rel="stylesheet" href="index.css" />
     <script defer src="render.js"></script>
   </head>
-  <body class="content">
+  <body>
     <h1>Desktop Capturer</h1>
-	We are using Node.js <span id="node-version"></span>,
-	Chromium <span id="chrome-version"></span>,
-	and Electron <span id="electron-version"></span>.<hr>
+  	<div>
+		We are using Node.js <span id="node-version"></span>,
+		Chromium <span id="chrome-version"></span>,
+		and Electron <span id="electron-version"></span>.
+  	</div>
 
-    <video></video>
+	<div align="center">
+		<video></video>
+	</div>
 
-    <button id="startBtn" class="button is-primary">Start</button>
-    <button id="stopBtn" class="button is-warning">Stop</button>
-
-    <hr />
-
-    <button id="videoSelectBtn" class="button is-text">
-      Choose a Video Source
-    </button>
+  	<div>
+	    <button id="startBtn" class="button is-primary">Start</button>
+	    <button id="stopBtn" class="button is-warning">Stop</button>
+	    <button id="videoSelectBtn" class="button is-text">Choose</button>
+  	</div>
   </body>
 </html>

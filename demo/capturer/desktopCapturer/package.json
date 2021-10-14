@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start-log": "electron . --enable-logging --v=0",
-    "start-v": "electron . --enable-logging --vmodule=*/webrtc/*=1",
-    "start-gdi": "electron . --disable-features=DirectXCapturer",
-    "start": "electron ."
+    "start-dx": "electron .",
+    "start-dx-log": "electron . --enable-logging --vmodule=*/webrtc/*=1",
+    "start": "electron . --disable-features=DirectXCapturer",
+    "start-log": "electron . --disable-features=DirectXCapturer --enable-logging --vmodule=*/webrtc/*=1"
   },
   "keywords": [],
   "author": "xxlang",

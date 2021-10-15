@@ -99,11 +99,12 @@ int ScreenCapturerWinDirectx::GetIndexFromScreenId(
 }
 
 ScreenCapturerWinDirectx::ScreenCapturerWinDirectx(bool enable_border)
-    : controller_(DxgiDuplicatorController::Instance()) {
-  //+by xxlang@2021-09-28 {
-  enable_border_ = enable_border;
-  first_capture_ = true;
-  //+by xxlang@2021-09-28 }
+    : controller_(DxgiDuplicatorController::Instance()),
+      enable_border_(enable_border), //+by xxlang@2021-09-28
+      first_capture_(true), //+by xxlang@2021-09-28
+      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
+{
+  RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx " << (enable_border_ ? "with" : "without") << " window border";
 }
 
 ScreenCapturerWinDirectx::~ScreenCapturerWinDirectx() = default;
@@ -128,7 +129,7 @@ void ScreenCapturerWinDirectx::CaptureFrame() {
   int64_t capture_start_time_nanos = rtc::TimeNanos();
 
   //+by xxlang@2021-09-28 {
-  if (enable_border_ && !border_window_.IsCreated()) {
+  if (enable_border_ && !window_border_->IsCreated()) {
     if (first_capture_) {
       first_capture_ = false;
     } else {
@@ -136,7 +137,7 @@ void ScreenCapturerWinDirectx::CaptureFrame() {
       bool valid = IsScreenValid(current_screen_id_, &current_device_key);
       if (valid) {
         RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx create border window for screen " << current_screen_id_;
-        border_window_.CreateForScreen(GetScreenRect(current_screen_id_, current_device_key));
+        window_border_->CreateForScreen(GetScreenRect(current_screen_id_, current_device_key));
       }
     }
   }
@@ -234,7 +235,7 @@ bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
   //+by xxlang@2021-09-28 {
   RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx::SelectSource " << current_screen_id_ << " => " << index;
   if (current_screen_id_ != index) {
-    border_window_.Destroy();
+    window_border_->Destroy();
     first_capture_ = true;
   }
   //+by xxlang@2021-09-28 }

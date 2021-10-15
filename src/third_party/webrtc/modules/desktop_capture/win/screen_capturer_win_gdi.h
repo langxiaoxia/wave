@@ -20,7 +20,7 @@
 #include "modules/desktop_capture/shared_desktop_frame.h"
 #include "modules/desktop_capture/win/display_configuration_monitor.h"
 #include "modules/desktop_capture/win/scoped_thread_desktop.h"
-#include "modules/desktop_capture/win/screen_border_window.h" //+by xxlang@2021-09-28
+#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-10-15
 #include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
@@ -65,7 +65,7 @@ class ScreenCapturerWinGdi : public DesktopCapturer {
   //+by xxlang@2021-09-28 {
   bool enable_border_;
   bool first_capture_;
-  ScreenBorderWindow border_window_;
+  std::unique_ptr<WindowBorder> window_border_;
 //+by xxlang@2021-09-28 }
 
   ScopedThreadDesktop desktop_;

@@ -23,7 +23,7 @@
 #include "modules/desktop_capture/screen_capture_frame_queue.h"
 #include "modules/desktop_capture/win/dxgi_duplicator_controller.h"
 #include "modules/desktop_capture/win/dxgi_frame.h"
-#include "modules/desktop_capture/win/screen_border_window.h" //+by xxlang@2021-09-28
+#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-10-15
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -92,7 +92,7 @@ class RTC_EXPORT ScreenCapturerWinDirectx : public DesktopCapturer {
   //+by xxlang@2021-09-28 {
   bool enable_border_;
   bool first_capture_;
-  ScreenBorderWindow border_window_;
+  std::unique_ptr<WindowBorder> window_border_;
 //+by xxlang@2021-09-28 }
 
   RTC_DISALLOW_COPY_AND_ASSIGN(ScreenCapturerWinDirectx);

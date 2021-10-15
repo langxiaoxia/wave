@@ -2,7 +2,9 @@
 // Use of this source code is governed by the MIT license that can be
 // found in the LICENSE file.
 
-#include "modules/desktop_capture/win/screen_border_window.h"
+#include "modules/desktop_capture/window_border.h"
+#include "modules/desktop_capture/win/window_capture_utils.h"
+#include "rtc_base/constructor_magic.h"
 
 #include "rtc_base/logging.h"
 #include "rtc_base/win32.h"
@@ -11,9 +13,32 @@ namespace webrtc {
 
 namespace {
 
+class WindowBorderWin : public WindowBorder {
+ public:
+  explicit WindowBorderWin() = default;
+  ~WindowBorderWin() override;
+
+  bool CreateForWindow(DesktopCapturer::SourceId source_id) override;
+  bool CreateForScreen(const DesktopRect &window_rect) override;
+  bool IsCreated() override;
+  void Destroy() override;
+
+  HWND GetSourceWindow();
+
+ private:
+  bool Create(const DesktopRect &window_rect, HWND hwnd);
+
+  HINSTANCE window_instance_ = nullptr;
+  ATOM window_class_ = 0;
+  HWND hwnd_border_ = nullptr;
+  HWND hwnd_ = nullptr;
+
+  RTC_DISALLOW_COPY_AND_ASSIGN(WindowBorderWin);
+};
+
 #define ID_UPDATE_TIMER 100
 
-const WCHAR kWindowClass[] = L"ScreenBorderWindowClass";
+const WCHAR kWindowClass[] = L"BorderWindowClass";
 const COLORREF kHighlightColor = RGB(255, 0, 0);
 const COLORREF kTransparentColor = RGB(0, 0, 0);
 const int kBorderWidth = 3;
@@ -21,13 +46,13 @@ const HWND kScreenWindow = HWND_TOP;
 const UINT kUpdateScreenInterval = 250; // ms
 const UINT kUpdateWindowInterval = 15; // ms
 
-void UpdateScreenBorderWindow(HWND hwnd_border) {
+void UpdateBorderWindow(HWND hwnd_border) {
   DesktopRect window_rect;
   if (!GetWindowRect(hwnd_border, &window_rect)) {
-    RTC_LOG(LS_WARNING) << "UpdateScreenBorderWindow: Failed to get window info: " << GetLastError();
+    RTC_LOG(LS_WARNING) << "UpdateBorderWindow: Failed to get window info: " << GetLastError();
     return;
   }
-  RTC_LOG(LS_INFO) << "UpdateScreenBorderWindow hwnd=" << hwnd_border << " WindowRect=(" 
+  RTC_LOG(LS_INFO) << "UpdateBorderWindow hwnd=" << hwnd_border << " WindowRect=(" 
     << window_rect.left() << ", " << window_rect.top() << ")-(" << window_rect.right() << ", " << window_rect.bottom() << ")" 
     << ", " << window_rect.width() << "x" << window_rect.height();
 
@@ -42,10 +67,10 @@ void UpdateScreenBorderWindow(HWND hwnd_border) {
 
   RECT rect;
   ::GetClientRect(hwnd_border, &rect);
-  RTC_LOG(LS_INFO) << "UpdateScreenBorderWindow hwnd=" << hwnd_border << " ClientRect=(" << rect.left << ", " << rect.top << ")-(" << rect.right << ", " << rect.bottom << ")";
+  RTC_LOG(LS_INFO) << "UpdateBorderWindow hwnd=" << hwnd_border << " ClientRect=(" << rect.left << ", " << rect.top << ")-(" << rect.right << ", " << rect.bottom << ")";
   ::FillRect(hMemDC, &rect, ::CreateSolidBrush(kHighlightColor));
   ::InflateRect(&rect, -kBorderWidth, -kBorderWidth);
-  RTC_LOG(LS_INFO) << "UpdateScreenBorderWindow hwnd=" << hwnd_border << " TransparentClientRect=(" << rect.left << ", " << rect.top << ")-(" << rect.right << ", " << rect.bottom << ")";
+  RTC_LOG(LS_INFO) << "UpdateBorderWindow hwnd=" << hwnd_border << " TransparentClientRect=(" << rect.left << ", " << rect.top << ")-(" << rect.right << ", " << rect.bottom << ")";
   ::FillRect(hMemDC, &rect, ::CreateSolidBrush(kTransparentColor));
 
   if (::UpdateLayeredWindow(hwnd_border, hDC, &ptDst, &sizeDst, hMemDC, &ptSrc, kTransparentColor, NULL, ULW_COLORKEY)) {
@@ -164,15 +189,15 @@ void FlagString(UINT uFlags, char *sFlags) {
 #endif /* WINVER >= 0x0400 */
 }
 
-LRESULT CALLBACK ScreenBorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_MOVE:
-      RTC_LOG(LS_INFO) << "ScreenBorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", x=" << LOWORD(lParam) << ", y=" << HIWORD(lParam);
       break;
 
     case WM_SIZE:
-      RTC_LOG(LS_INFO) << "ScreenBorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", type=" << wParam << ", width=" << LOWORD(lParam) << ", height=" << HIWORD(lParam);
       break;
 
@@ -182,7 +207,7 @@ LRESULT CALLBACK ScreenBorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
       WINDOWPOS wp = *(WINDOWPOS*)lParam;
       char sFlags[256];
       FlagString(wp.flags, sFlags);
-      RTC_LOG(LS_INFO) << "ScreenBorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", hwndInsertAfter=" << wp.hwndInsertAfter
                        << ", x=" << wp.x << ", y=" << wp.y << ", cx=" << wp.cx << ", cy=" << wp.cy << ", flags=" << sFlags;
       break;
@@ -191,9 +216,9 @@ LRESULT CALLBACK ScreenBorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
     default:
       if (msg != WM_NULL && msg != WM_GETTEXT && msg != WM_GETTEXTLENGTH) {
         if (strlen(MsgString(msg)) > 0) {
-          RTC_LOG(LS_INFO) << "ScreenBorderWindowProc hwnd=" << hwnd <<  ", msg=" << MsgString(msg);
+          RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd <<  ", msg=" << MsgString(msg);
         } else {
-          RTC_LOG(LS_INFO) << "ScreenBorderWindowProc hwnd=" << hwnd <<  ", msg=" << msg;
+          RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd <<  ", msg=" << msg;
         }
       }
       break;
@@ -203,21 +228,21 @@ LRESULT CALLBACK ScreenBorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPAR
 }
 
 VOID CALLBACK UpdateScreenTimerProc(HWND hwnd_border, UINT message, UINT idTimer, DWORD dwTime) {
-    UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
-    char sFlags[256];
-    FlagString(uFlags, sFlags);
-  if (::SetWindowPos(hwnd_border, kScreenWindow, 0, 0, 0, 0, uFlags)) {
+  UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
+  char sFlags[256];
+  FlagString(uFlags, sFlags);
+  if (!::SetWindowPos(hwnd_border, kScreenWindow, 0, 0, 0, 0, uFlags)) {
     RTC_LOG(LS_INFO) << "SetWindowPos Failed: error=" << GetLastError() << ", hInsertAfter=" << kScreenWindow << ", flags=" << sFlags;
   }
 }
 
 VOID CALLBACK UpdateWindowTimerProc(HWND hwnd_border, UINT message, UINT idTimer, DWORD dwTime) {
-  ScreenBorderWindow *pThis = (ScreenBorderWindow *)::GetWindowLongPtr(hwnd_border, GWLP_USERDATA);
+  WindowBorderWin *pThis = (WindowBorderWin *)::GetWindowLongPtr(hwnd_border, GWLP_USERDATA);
   if (NULL == pThis) {
     RTC_LOG(LS_ERROR) << "GWLP_USERDATA is NULL";
     return;
   }
-  HWND hwnd = pThis->GetWindow();
+  HWND hwnd = pThis->GetSourceWindow();
   if (NULL == hwnd) {
     RTC_LOG(LS_ERROR) << "hwnd is NULL";
     return;
@@ -246,17 +271,16 @@ VOID CALLBACK UpdateWindowTimerProc(HWND hwnd_border, UINT message, UINT idTimer
     } else {
       RTC_LOG(LS_INFO) << "MoveWindow Failed: error=" << GetLastError() << ", x=" << cropped_rect.left() << ", y=" << cropped_rect.top() << ", cx=" << cropped_rect.width() << ", cy=" << cropped_rect.height();
     }
-    UpdateScreenBorderWindow(hwnd_border);
+    UpdateBorderWindow(hwnd_border);
   }
 }
 
-}  // namespace
-
-ScreenBorderWindow::~ScreenBorderWindow() {
+WindowBorderWin::~WindowBorderWin() {
   Destroy();
 }
 
-bool ScreenBorderWindow::CreateForWindow(HWND hwnd) {
+bool WindowBorderWin::CreateForWindow(DesktopCapturer::SourceId source_id) {
+  HWND hwnd = reinterpret_cast<HWND>(source_id);
   const int frame_width = GetSystemMetrics(SM_CXSIZEFRAME);
   const int frame_height = GetSystemMetrics(SM_CYSIZEFRAME);
   const int border_width = GetSystemMetrics(SM_CXBORDER);
@@ -285,11 +309,7 @@ bool ScreenBorderWindow::CreateForWindow(HWND hwnd) {
   return true;
 }
 
-HWND ScreenBorderWindow::GetWindow() {
-  return hwnd_;
-}
-
-bool ScreenBorderWindow::CreateForScreen(DesktopRect window_rect) {
+bool WindowBorderWin::CreateForScreen(const DesktopRect &window_rect) {
   if (!Create(window_rect, kScreenWindow)) {
     return false;
   }
@@ -299,7 +319,7 @@ bool ScreenBorderWindow::CreateForScreen(DesktopRect window_rect) {
   return true;
 }
 
-bool ScreenBorderWindow::IsCreated() {
+bool WindowBorderWin::IsCreated() {
   if (hwnd_border_) {
     return true;
   } else {
@@ -307,7 +327,7 @@ bool ScreenBorderWindow::IsCreated() {
   }
 }
 
-void ScreenBorderWindow::Destroy() {
+void WindowBorderWin::Destroy() {
   if (hwnd_border_) {
     ::KillTimer(hwnd_border_, ID_UPDATE_TIMER);
     RTC_LOG(LS_WARNING) << "Timer Off";
@@ -326,7 +346,11 @@ void ScreenBorderWindow::Destroy() {
   hwnd_ = nullptr;
 }
 
-bool ScreenBorderWindow::Create(DesktopRect window_rect, HWND hwnd) {
+HWND WindowBorderWin::GetSourceWindow() {
+  return hwnd_;
+}
+
+bool WindowBorderWin::Create(const DesktopRect &window_rect, HWND hwnd) {
   // check created
   if (IsCreated()) {
     RTC_LOG(LS_WARNING) << "Create failed : already created";
@@ -345,12 +369,12 @@ bool ScreenBorderWindow::Create(DesktopRect window_rect, HWND hwnd) {
   // create border window
   ::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                        GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                       reinterpret_cast<LPCWSTR>(&ScreenBorderWindowProc),
+                       reinterpret_cast<LPCWSTR>(&BorderWindowProc),
                        &window_instance_);
 
   WNDCLASSW wc;
   memset(&wc, 0, sizeof(wc));
-  wc.lpfnWndProc = &ScreenBorderWindowProc;
+  wc.lpfnWndProc = &BorderWindowProc;
   wc.hInstance = window_instance_;
   wc.lpszClassName = kWindowClass;
   window_class_ = ::RegisterClassW(&wc);
@@ -360,23 +384,31 @@ bool ScreenBorderWindow::Create(DesktopRect window_rect, HWND hwnd) {
   }
 
   DWORD dwExStyle = WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT | WS_EX_TOPMOST;
-  DWORD dwStyle = WS_POPUP | WS_DISABLED; // create without WS_BORDER
+  DWORD dwStyle = WS_POPUP | WS_DISABLED; // create border window without WS_BORDER style
   hwnd_border_ = ::CreateWindowExW(dwExStyle, kWindowClass, L"", dwStyle,
                               window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height(), 
                               /*parent_window=*/nullptr, /*menu_bar=*/nullptr, window_instance_,
                               /*additional_params=*/nullptr);
   if (NULL == hwnd_border_) {
-    RTC_LOG(LS_WARNING) << "CreateWindow failed : " << GetLastError();
+    RTC_LOG(LS_WARNING) << "CreateWindowEx failed : " << GetLastError();
     Destroy();
     return false;
   }
 
-  RTC_LOG(LS_INFO) << "CreateWindow hwnd_border=" << hwnd_border_ << " (" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height();
+  RTC_LOG(LS_INFO) << "CreateWindowEx hwnd_border=" << hwnd_border_ << " (" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height();
   ::ShowWindow(hwnd_border_, SW_SHOWNA);
-  UpdateScreenBorderWindow(hwnd_border_);
+  UpdateBorderWindow(hwnd_border_);
 
   ::SetWindowLongPtr(hwnd_border_, GWLP_USERDATA, (LONG_PTR)this);
   return true;
+}
+
+}  // namespace
+
+
+// static
+std::unique_ptr<WindowBorder> DesktopCapturer::CreateWindowBorder() {
+  return std::unique_ptr<WindowBorder>(new WindowBorderWin());
 }
 
 }  // namespace webrtc

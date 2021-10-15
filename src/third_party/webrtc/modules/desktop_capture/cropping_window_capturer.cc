@@ -15,7 +15,6 @@
 #include <utility>
 
 #include "modules/desktop_capture/cropped_desktop_frame.h"
-#include "modules/desktop_capture/win/window_capture_utils.h" //+by xxlang@2021-09-28
 #include "rtc_base/logging.h"
 
 namespace webrtc {
@@ -23,15 +22,19 @@ namespace webrtc {
 CroppingWindowCapturer::CroppingWindowCapturer(
     const DesktopCaptureOptions& options)
     : last_window_id_(kNullWindowId), //+by xxlang@2021-09-09
-      enable_border_(false), //+by xxlang@2021-09-28
       options_(options),
       callback_(NULL),
-      window_capturer_(DesktopCapturer::CreateRawWindowCapturer(options)),
       selected_window_(kNullWindowId),
       excluded_window_(kNullWindowId),
       last_capturer_(0), //+by xxlang@2021-09-09
-      first_capture_(false) //+by xxlang@2021-09-28
-{}
+      enable_border_(options.enable_border()), //+by xxlang@2021-09-28
+      first_capture_(true), //+by xxlang@2021-09-28
+      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
+{
+  RTC_LOG(LS_WARNING) << "CroppingWindowCapturer " << (enable_border_ ? "with" : "without") << " window border";
+  options_.set_enable_border(false);
+  window_capturer_ = DesktopCapturer::CreateRawWindowCapturer(options_);
+}
 
 CroppingWindowCapturer::~CroppingWindowCapturer() {}
 
@@ -47,11 +50,11 @@ void CroppingWindowCapturer::SetSharedMemoryFactory(
 
 void CroppingWindowCapturer::CaptureFrame() {
   //+by xxlang@2021-09-28 {
-  if (enable_border_ && !border_window_.IsCreated()) {
+  if (enable_border_ && !window_border_->IsCreated()) {
     if (first_capture_) {
       first_capture_ = false;
     } else {
-      border_window_.CreateForWindow(reinterpret_cast<HWND>(selected_window_));
+      window_border_->CreateForWindow(selected_window_);
     }
   }
   //+by xxlang@2021-09-28 }
@@ -94,7 +97,7 @@ bool CroppingWindowCapturer::SelectSource(SourceId id) {
     RTC_LOG(LS_WARNING) << "CroppingWindowCapturer::SelectSource " << selected_window_ << " => " << id;
     //+by xxlang@2021-09-28 {
     if (selected_window_ != id) {
-      border_window_.Destroy();
+      window_border_->Destroy();
       first_capture_ = true;
     }
     //+by xxlang@2021-09-28 }

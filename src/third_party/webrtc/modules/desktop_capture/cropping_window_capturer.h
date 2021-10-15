@@ -19,7 +19,7 @@
 #include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/desktop_geometry.h"
 #include "modules/desktop_capture/shared_memory.h"
-#include "modules/desktop_capture/win/screen_border_window.h" //+by xxlang@2021-09-28
+#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-10-15
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -72,7 +72,6 @@ class RTC_EXPORT CroppingWindowCapturer : public DesktopCapturer,
   DesktopCapturer* window_capturer() const { return window_capturer_.get(); }
 
   WindowId last_window_id_; //+by xxlang@2021-09-09
-  bool enable_border_; //+by xxlang@2021-09-28
 
  private:
   DesktopCaptureOptions options_;
@@ -84,8 +83,9 @@ class RTC_EXPORT CroppingWindowCapturer : public DesktopCapturer,
   int last_capturer_; //+by xxlang@2021-09-09
 
   //+by xxlang@2021-09-28 {
+  bool enable_border_;
   bool first_capture_;
-  ScreenBorderWindow border_window_;
+  std::unique_ptr<WindowBorder> window_border_;
   //+by xxlang@2021-09-28 }
 };
 

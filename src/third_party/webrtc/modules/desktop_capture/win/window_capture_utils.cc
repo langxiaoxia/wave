@@ -15,7 +15,6 @@
 
 #include <algorithm>
 
-#include "base/win/scoped_com_initializer.h"
 #include "modules/desktop_capture/win/scoped_gdi_object.h"
 #include "rtc_base/arraysize.h"
 #include "rtc_base/checks.h"
@@ -474,7 +473,6 @@ bool WindowCaptureHelperWin::IsWindowOnCurrentDesktop(HWND hwnd) {
   // Make sure the window is on the current virtual desktop.
   if (virtual_desktop_manager_) {
     BOOL on_current_desktop;
-    base::win::ScopedCOMInitializer com_initializer(base::win::ScopedCOMInitializer::kMTA); //+by xxlang@2021-10-12
     if (SUCCEEDED(virtual_desktop_manager_->IsWindowOnCurrentVirtualDesktop(
             hwnd, &on_current_desktop)) &&
         !on_current_desktop) {

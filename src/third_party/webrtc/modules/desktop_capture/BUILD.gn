@@ -360,6 +360,7 @@ rtc_library("desktop_capture_generic") {
     "screen_capturer_helper.h",
     "window_finder.cc",
     "window_finder.h",
+    "window_border.h",
   ]
 
   if (is_mac) {
@@ -520,8 +521,7 @@ rtc_library("desktop_capture_generic") {
       "window_capturer_win.cc",
       "window_finder_win.cc",
       "window_finder_win.h",
-      "win/screen_border_window.cc",
-      "win/screen_border_window.h",
+      "window_border_win.cc",
     ]
     libs = [
       "d3d11.lib",

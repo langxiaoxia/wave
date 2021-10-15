@@ -38,7 +38,13 @@ const wchar_t kDwmapiLibraryName[] = L"dwmapi.dll";
 }  // namespace
 
 ScreenCapturerWinGdi::ScreenCapturerWinGdi(
-    const DesktopCaptureOptions& options) {
+    const DesktopCaptureOptions& options)
+    : enable_border_(options.enable_border()), //+by xxlang@2021-09-28
+      first_capture_(true), //+by xxlang@2021-09-28
+      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
+{
+  RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi " << (enable_border_ ? "with" : "without") << " window border";
+
   if (options.disable_effects()) {
     // Load dwmapi.dll dynamically since it is not available on XP.
     if (!dwmapi_library_)
@@ -49,11 +55,6 @@ ScreenCapturerWinGdi::ScreenCapturerWinGdi(
           GetProcAddress(dwmapi_library_, "DwmEnableComposition"));
     }
   }
-
-  //+by xxlang@2021-09-28 {
-  enable_border_ = options.enable_border();
-  first_capture_ = true;
-  //+by xxlang@2021-09-28 }
 }
 
 ScreenCapturerWinGdi::~ScreenCapturerWinGdi() {
@@ -113,7 +114,7 @@ bool ScreenCapturerWinGdi::SelectSource(SourceId id) {
     RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::SelectSource " << current_screen_id_ << " => " << id;
     //+by xxlang@2021-09-28 {
     if (current_screen_id_ != id) {
-      border_window_.Destroy();
+      window_border_->Destroy();
       first_capture_ = true;
     }
     //+by xxlang@2021-09-28 }
@@ -144,7 +145,7 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
   if (input_desktop && !desktop_.IsSame(*input_desktop)) {
     //+by xxlang@2021-09-28 {
     RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::input_desktop_changed";
-    border_window_.Destroy();
+    window_border_->Destroy();
     first_capture_ = true;
     //+by xxlang@2021-09-28 }
 
@@ -174,7 +175,7 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
   if (display_configuration_monitor_.IsChanged()) {
     //+by xxlang@2021-09-28 {
     RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::display_configuration_monitor_changed";
-    border_window_.Destroy();
+    window_border_->Destroy();
     first_capture_ = true;
     //+by xxlang@2021-09-28 }
 
@@ -202,12 +203,12 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
   }
 
   //+by xxlang@2021-09-28 {
-  if (enable_border_ && !border_window_.IsCreated()) {
+  if (enable_border_ && !window_border_->IsCreated()) {
     if (first_capture_) {
       first_capture_ = false;
     } else {
       RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi create border window for screen " << current_screen_id_;
-      border_window_.CreateForScreen(GetScreenRect(current_screen_id_, current_device_key_));
+      window_border_->CreateForScreen(GetScreenRect(current_screen_id_, current_device_key_));
     }
   }
   //+by xxlang@2021-09-28 }

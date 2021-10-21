@@ -24,6 +24,7 @@
 #include "modules/desktop_capture/mac/desktop_frame_cgimage.h"
 #include "modules/desktop_capture/mac/window_list_utils.h"
 #include "modules/desktop_capture/window_finder_mac.h"
+#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-10-21
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/trace_event.h"
@@ -49,7 +50,8 @@ class WindowCapturerMac : public DesktopCapturer {
  public:
   explicit WindowCapturerMac(
       rtc::scoped_refptr<FullScreenWindowDetector> full_screen_window_detector,
-      rtc::scoped_refptr<DesktopConfigurationMonitor> configuration_monitor);
+      rtc::scoped_refptr<DesktopConfigurationMonitor> configuration_monitor,
+      bool enable_border);
   ~WindowCapturerMac() override;
 
   // DesktopCapturer interface.
@@ -74,15 +76,28 @@ class WindowCapturerMac : public DesktopCapturer {
 
   WindowFinderMac window_finder_;
 
+  //+by xxlang@2021-10-21 {
+  bool enable_border_;
+  bool first_capture_;
+  std::unique_ptr<WindowBorder> window_border_;
+  //+by xxlang@2021-10-21 }
+  
   RTC_DISALLOW_COPY_AND_ASSIGN(WindowCapturerMac);
 };
 
 WindowCapturerMac::WindowCapturerMac(
     rtc::scoped_refptr<FullScreenWindowDetector> full_screen_window_detector,
-    rtc::scoped_refptr<DesktopConfigurationMonitor> configuration_monitor)
+    rtc::scoped_refptr<DesktopConfigurationMonitor> configuration_monitor,
+    bool enable_border)
     : full_screen_window_detector_(std::move(full_screen_window_detector)),
       configuration_monitor_(std::move(configuration_monitor)),
-      window_finder_(configuration_monitor_) {}
+      window_finder_(configuration_monitor_),
+      enable_border_(enable_border), //+by xxlang@2021-10-21
+      first_capture_(true), //+by xxlang@2021-10-21
+      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-21
+{
+  RTC_LOG(LS_WARNING) << "WindowCapturerMac " << (enable_border_ ? "with" : "without") << " window border";
+}
 
 WindowCapturerMac::~WindowCapturerMac() {}
 
@@ -93,6 +108,13 @@ bool WindowCapturerMac::GetSourceList(SourceList* sources) {
 bool WindowCapturerMac::SelectSource(SourceId id) {
   if (!IsWindowValid(id))
     return false;
+  //+by xxlang@2021-10-21 {
+  RTC_LOG(LS_WARNING) << "WindowCapturerMac::SelectSource " << window_id_ << " => " << id;
+  if (window_id_ != id) {
+    window_border_->Destroy();
+    first_capture_ = true;
+  }
+  //+by xxlang@2021-10-21 }
   window_id_ = id;
   return true;
 }
@@ -159,6 +181,17 @@ void WindowCapturerMac::CaptureFrame() {
     return;
   }
 
+  //+by xxlang@2021-10-21 {
+  if (enable_border_ && !window_border_->IsCreated()) {
+    if (first_capture_) {
+      first_capture_ = false;
+    } else {
+      RTC_LOG(LS_WARNING) << "WindowCapturerMac create border window for window " << window_id_;
+      window_border_->CreateForWindow(window_id_);
+    }
+  }
+  //+by xxlang@2021-10-21 }
+
   CGWindowID on_screen_window = window_id_;
   if (full_screen_window_detector_) {
     full_screen_window_detector_->UpdateWindowListIfNeeded(
@@ -211,7 +244,7 @@ void WindowCapturerMac::CaptureFrame() {
 std::unique_ptr<DesktopCapturer> DesktopCapturer::CreateRawWindowCapturer(
     const DesktopCaptureOptions& options) {
   return std::unique_ptr<DesktopCapturer>(new WindowCapturerMac(
-      options.full_screen_window_detector(), options.configuration_monitor()));
+      options.full_screen_window_detector(), options.configuration_monitor(), options.enable_border()));
 }
 
 }  // namespace webrtc

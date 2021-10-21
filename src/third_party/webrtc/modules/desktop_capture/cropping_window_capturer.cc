@@ -54,6 +54,7 @@ void CroppingWindowCapturer::CaptureFrame() {
     if (first_capture_) {
       first_capture_ = false;
     } else {
+      RTC_LOG(LS_WARNING) << "CroppingWindowCapturer create border window for window " << selected_window_;
       window_border_->CreateForWindow(selected_window_);
     }
   }

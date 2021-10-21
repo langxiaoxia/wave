@@ -291,6 +291,7 @@ if (is_mac) {
       "window_capturer_mac.mm",
       "window_finder_mac.h",
       "window_finder_mac.mm",
+      "window_border_mac.mm",
     ]
     deps = [
       ":desktop_capture_generic",

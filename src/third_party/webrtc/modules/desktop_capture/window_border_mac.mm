@@ -33,11 +33,11 @@
 
 - (void)drawRect:(NSRect)dirtyRect {
 //  RTC_LOG(LS_INFO) << "BorderView drawRect dirtyRect=(" << dirtyRect.origin.x << ", " << dirtyRect.origin.y << ") " << dirtyRect.size.width << "x" << dirtyRect.size.height;
-  NSRect borderRect = NSInsetRect(self.frame, 1.5, 1.5);
+  NSRect borderRect = NSInsetRect(self.frame, 1.0, 1.0);
 //  RTC_LOG(LS_INFO) << "BorderView drawRect borderRect=(" << borderRect.origin.x << ", " << borderRect.origin.y << ") " << borderRect.size.width << "x" << borderRect.size.height;
-  [NSBezierPath setDefaultLineWidth:3.0];
+  [NSBezierPath setDefaultLineWidth:2.0];
   NSBezierPath *path = [NSBezierPath bezierPathWithRect:borderRect];
-  [[NSColor redColor] set];
+  [[NSColor redColor] setStroke];
   [path stroke];
 }
 
@@ -47,6 +47,19 @@
 namespace webrtc {
 
 namespace {
+
+// Returns true if the window exists.
+bool IsWindowValid(CGWindowID id) {
+  CFArrayRef window_id_array =
+      CFArrayCreate(nullptr, reinterpret_cast<const void**>(&id), 1, nullptr);
+  CFArrayRef window_array =
+      CGWindowListCreateDescriptionFromArray(window_id_array);
+  bool valid = window_array && CFArrayGetCount(window_array);
+  CFRelease(window_id_array);
+  CFRelease(window_array);
+
+  return valid;
+}
 
 class WindowBorderMac : public WindowBorder {
  public:
@@ -194,40 +207,52 @@ bool WindowBorderMac::Create(const DesktopRect &window_rect, CGWindowID source_i
     dispatch_set_context(timer, this);
     dispatch_source_set_event_handler(timer, ^{
       WindowBorderMac *pThis = (WindowBorderMac *)dispatch_get_context(timer);
-      if (pThis != nil) {
-        if (!IsWindowOnScreen(pThis->GetSourceId())) {
+      if (nil == pThis) {
+        return;
+      }
+
+      if (!IsWindowValid(pThis->GetSourceId())) {
+        return;
+      }
+      
+      if (nil == pThis->GetBorderWindow()) {
+        return;
+      }
+
+      if (!IsWindowOnScreen(pThis->GetSourceId())) {
 //          RTC_LOG(LS_WARNING) << "border window hide";
-          [pThis->GetBorderWindow() orderOut:nil];
-          return;
-        }
+        [pThis->GetBorderWindow() orderOut:nil];
+        return;
+      }
 
-        NSWindowLevel border_level = [pThis->GetBorderWindow() level];
-        NSWindowLevel source_level = GetWindowLevel(pThis->GetSourceId());
-        if (border_level != source_level) {
-          RTC_LOG(LS_WARNING) << "border level change: " << border_level << " => " << source_level;
-          [pThis->GetBorderWindow() setLevel:source_level];
-        }
+      NSWindowLevel border_level = [pThis->GetBorderWindow() level];
+      NSWindowLevel source_level = GetWindowLevel(pThis->GetSourceId());
+      if (border_level != source_level) {
+        RTC_LOG(LS_WARNING) << "border level change: " << border_level << " => " << source_level;
+        [pThis->GetBorderWindow() setLevel:source_level];
+      }
 
-        NSInteger border_order_old = [pThis->GetBorderWindow() orderedIndex];
-        [pThis->GetBorderWindow() orderWindow:NSWindowAbove relativeTo:pThis->GetSourceId()];
-        NSInteger border_order_new = [pThis->GetBorderWindow() orderedIndex];
-        if (border_order_old != border_order_new) {
-          RTC_LOG(LS_WARNING) << "border order change: " << border_order_old << " => " << border_order_new;
-        }
-        
-        NSRect border_rect =  [pThis->GetBorderWindow() frame];
-        DesktopRect window_rect = GetWindowBounds(pThis->GetSourceId());
-        gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
-        NSRect source_rect = gfx::ScreenRectToNSRect(screen_rect);
-        if (!NSEqualRects(source_rect, border_rect)) {
-//          RTC_LOG(LS_WARNING) << "border_rect=" << " (" << border_rect.origin.x << ", " << border_rect.origin.y << ") " << border_rect.size.width << "x" << border_rect.size.height << ", source_rect=" << source_level<< " (" << source_rect.origin.x << ", " << source_rect.origin.y << ") " << source_rect.size.width << "x" << source_rect.size.height;
-          [pThis->GetBorderWindow() setFrame:source_rect display:YES];
-        }
+      NSInteger border_order_old = [pThis->GetBorderWindow() orderedIndex];
+      [pThis->GetBorderWindow() orderWindow:NSWindowAbove relativeTo:pThis->GetSourceId()];
+      NSInteger border_order_new = [pThis->GetBorderWindow() orderedIndex];
+      if (border_order_old != border_order_new) {
+//          RTC_LOG(LS_WARNING) << "border order change: " << border_order_old << " => " << border_order_new;
+      }
+      
+      NSRect border_rect =  [pThis->GetBorderWindow() frame];
+      DesktopRect window_rect = GetWindowBounds(pThis->GetSourceId());
+      gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
+      NSRect source_rect = gfx::ScreenRectToNSRect(screen_rect);
+      if (!NSEqualRects(source_rect, border_rect)) {
+        RTC_LOG(LS_WARNING) << "border_rect=" << " (" << border_rect.origin.x << ", " << border_rect.origin.y << ") " << border_rect.size.width << "x" << border_rect.size.height << ", source_rect=" << source_level<< " (" << source_rect.origin.x << ", " << source_rect.origin.y << ") " << source_rect.size.width << "x" << source_rect.size.height;
+        [pThis->GetBorderWindow() setFrame:source_rect display:YES];
       }
     });
+
     dispatch_resume(timer);
     window_timer_ = timer;
   }
+
   return true;
 }
 

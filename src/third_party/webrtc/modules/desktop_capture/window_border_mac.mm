@@ -32,9 +32,9 @@
 }
 
 - (void)drawRect:(NSRect)dirtyRect {
-  RTC_LOG(LS_INFO) << "BorderView drawRect dirtyRect=(" << dirtyRect.origin.x << ", " << dirtyRect.origin.y << ") " << dirtyRect.size.width << "x" << dirtyRect.size.height;
+//  RTC_LOG(LS_INFO) << "BorderView drawRect dirtyRect=(" << dirtyRect.origin.x << ", " << dirtyRect.origin.y << ") " << dirtyRect.size.width << "x" << dirtyRect.size.height;
   NSRect borderRect = NSInsetRect(self.frame, 1.5, 1.5);
-  RTC_LOG(LS_INFO) << "BorderView drawRect borderRect=(" << borderRect.origin.x << ", " << borderRect.origin.y << ") " << borderRect.size.width << "x" << borderRect.size.height;
+//  RTC_LOG(LS_INFO) << "BorderView drawRect borderRect=(" << borderRect.origin.x << ", " << borderRect.origin.y << ") " << borderRect.size.width << "x" << borderRect.size.height;
   [NSBezierPath setDefaultLineWidth:3.0];
   NSBezierPath *path = [NSBezierPath bezierPathWithRect:borderRect];
   [[NSColor redColor] set];
@@ -58,13 +58,15 @@ class WindowBorderMac : public WindowBorder {
   bool IsCreated() override;
   void Destroy() override;
 
-  CGWindowID GetSourceWindow();
+  CGWindowID GetSourceId();
+  NSWindow *GetBorderWindow();
 
  private:
-  bool Create(const DesktopRect &window_rect, CGWindowID hwnd);
+  bool Create(const DesktopRect &window_rect, CGWindowID source_id);
 
-  __strong NSWindow *hwnd_border_ = nil;
-  CGWindowID hwnd_ = 0;
+  CGWindowID source_id_ = kCGNullWindowID;
+  __strong NSWindow *border_window_ = nil;
+  __strong dispatch_source_t window_timer_ = nil;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(WindowBorderMac);
 };
@@ -85,13 +87,13 @@ bool WindowBorderMac::CreateForWindow(DesktopCapturer::SourceId source_id) {
 bool WindowBorderMac::CreateForScreen(const DesktopRect &window_rect) {
   RTC_LOG(LS_INFO) << "CreateForScreen: Thread=" << rtc::CurrentThreadId();
   dispatch_async(dispatch_get_main_queue(), ^(void) {
-    Create(window_rect, 0);
+    Create(window_rect, kCGNullWindowID);
   });
   return true;
 }
 
 bool WindowBorderMac::IsCreated() {
-  if (hwnd_border_) {
+  if (border_window_ != nil) {
     return true;
   } else {
     return false;
@@ -99,20 +101,30 @@ bool WindowBorderMac::IsCreated() {
 }
 
 void WindowBorderMac::Destroy() {
-  if (hwnd_border_) {
-    RTC_LOG(LS_WARNING) << "Destroy hwnd_border=" << hwnd_border_;
-    [hwnd_border_ close];
-    hwnd_border_ = nil;
+  if (window_timer_ != nil) {
+    RTC_LOG(LS_WARNING) << "Timer Off";
+    dispatch_source_cancel(window_timer_);
+    window_timer_ = nil;
   }
 
-  hwnd_ = 0;
+  if (border_window_ != nil) {
+    RTC_LOG(LS_WARNING) << "Destroy border_window=" << border_window_;
+    [border_window_ close];
+    border_window_ = nil;
+  }
+
+  source_id_ = kCGNullWindowID;
 }
 
-CGWindowID WindowBorderMac::GetSourceWindow() {
-  return hwnd_;
+CGWindowID WindowBorderMac::GetSourceId() {
+  return source_id_;
 }
 
-bool WindowBorderMac::Create(const DesktopRect &window_rect, CGWindowID hwnd) {
+NSWindow *WindowBorderMac::GetBorderWindow() {
+  return border_window_;
+}
+
+bool WindowBorderMac::Create(const DesktopRect &window_rect, CGWindowID source_id) {
   // check created
   if (IsCreated()) {
     RTC_LOG(LS_WARNING) << "Create failed : already created";
@@ -125,45 +137,97 @@ bool WindowBorderMac::Create(const DesktopRect &window_rect, CGWindowID hwnd) {
     return false;
   }
 
-  // save hwnd
-  hwnd_ = hwnd;
+  gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
+  NSRect content_rect = gfx::ScreenRectToNSRect(screen_rect);
+  NSWindowLevel border_level = kCGMaximumWindowLevel;
+  if (source_id != kCGNullWindowID) {
+    NSWindowLevel source_level = GetWindowLevel(source_id);
+    RTC_LOG(LS_INFO) << "Create Window Border: Thread=" << rtc::CurrentThreadId() << ", source_id=" << source_id << ", source_level=" << source_level << ", screen_rect(" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height()<< ", ns_rect(" << content_rect.origin.x << ", " << content_rect.origin.y << ") " << content_rect.size.width << "x" << content_rect.size.height;
+    border_level = source_level;
+  } else {
+    RTC_LOG(LS_INFO) << "Create Screen Border: Thread=" << rtc::CurrentThreadId() << ", source_id=" << source_id << ", source_level=screen, screen_rect(" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height()<< ", ns_rect(" << content_rect.origin.x << ", " << content_rect.origin.y << ") " << content_rect.size.width << "x" << content_rect.size.height;
+  }
+
+  // save source id
+  source_id_ = source_id;
 
   // create border window
-  RTC_LOG(LS_INFO) << "Create: Thread=" << rtc::CurrentThreadId() << ", hwnd_source=" << hwnd << " (" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height();
-  gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
-  NSRect rect = gfx::ScreenRectToNSRect(screen_rect);
-  hwnd_border_ =
-      [[NSWindow alloc] initWithContentRect:rect
+  border_window_ =
+      [[NSWindow alloc] initWithContentRect:content_rect
                                 styleMask:NSBorderlessWindowMask
                                   backing:NSBackingStoreBuffered
                                     defer:NO];
-  if (nil == hwnd_border_) {
+  if (nil == border_window_) {
     RTC_LOG(LS_WARNING) << "Create border window failed";
     Destroy();
     return false;
   }
-  NSRect wndRect = [hwnd_border_ frame];
-  RTC_LOG(LS_INFO) << "BorderWindow frameRect=(" << wndRect.origin.x << ", " << wndRect.origin.y << ") " << wndRect.size.width << "x" << wndRect.size.height;
 
-  [hwnd_border_ setReleasedWhenClosed:NO];
-  [hwnd_border_ setHasShadow:NO];
-  [hwnd_border_ setOpaque:NO];
-  [hwnd_border_ setAlphaValue:1.0];
-  [hwnd_border_ setBackgroundColor:[NSColor clearColor]];
-  [hwnd_border_ orderFrontRegardless];
-  [hwnd_border_ setLevel:kCGCursorWindowLevel];
+  [border_window_ setReleasedWhenClosed:NO];
+  [border_window_ setHasShadow:NO];
+  [border_window_ setOpaque:NO];
+  [border_window_ setAlphaValue:1.0];
+  [border_window_ setBackgroundColor:[NSColor clearColor]];
+  [border_window_ setLevel:border_level];
+  [border_window_ orderWindow:NSWindowAbove relativeTo:source_id];
+
+  NSInteger border_id = [border_window_ windowNumber];
+  NSInteger border_order = [border_window_ orderedIndex];
+  NSRect frame_rect =  [border_window_ frame];
+  RTC_LOG(LS_INFO) << "Create Border OK: window=" << border_window_ << ", id=" << border_id << ", order=" << border_order << ", frame=(" << frame_rect.origin.x << ", " << frame_rect.origin.y << ") " << frame_rect.size.width << "x" << frame_rect.size.height;
 
   BorderView *borderView =
-      [[BorderView alloc] initWithFrame:rect];
+      [[BorderView alloc] initWithFrame:content_rect];
   if (nil == borderView) {
     RTC_LOG(LS_WARNING) << "Create border view failed";
     Destroy();
     return false;
   }
-  NSRect viewRect = [borderView frame];
-  RTC_LOG(LS_INFO) << "BorderView frameRect=(" << viewRect.origin.x << ", " << viewRect.origin.y << ") " << viewRect.size.width << "x" << viewRect.size.height;
-  [hwnd_border_ setContentView:borderView];
+  [border_window_ setContentView:borderView];
 
+  if (source_id != kCGNullWindowID) {
+    dispatch_queue_t queue = dispatch_get_main_queue();
+    dispatch_source_t timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, queue);
+    uint64_t intervalInNanoSecs = (uint64_t)(15 * USEC_PER_SEC);
+    uint64_t leewayInNanoSecs = (uint64_t)(0 * NSEC_PER_SEC);
+    dispatch_source_set_timer(timer, DISPATCH_TIME_NOW, intervalInNanoSecs, leewayInNanoSecs);
+    dispatch_set_context(timer, this);
+    dispatch_source_set_event_handler(timer, ^{
+      WindowBorderMac *pThis = (WindowBorderMac *)dispatch_get_context(timer);
+      if (pThis != nil) {
+        if (!IsWindowOnScreen(pThis->GetSourceId())) {
+//          RTC_LOG(LS_WARNING) << "border window hide";
+          [pThis->GetBorderWindow() orderOut:nil];
+          return;
+        }
+
+        NSWindowLevel border_level = [pThis->GetBorderWindow() level];
+        NSWindowLevel source_level = GetWindowLevel(pThis->GetSourceId());
+        if (border_level != source_level) {
+          RTC_LOG(LS_WARNING) << "border level change: " << border_level << " => " << source_level;
+          [pThis->GetBorderWindow() setLevel:source_level];
+        }
+
+        NSInteger border_order_old = [pThis->GetBorderWindow() orderedIndex];
+        [pThis->GetBorderWindow() orderWindow:NSWindowAbove relativeTo:pThis->GetSourceId()];
+        NSInteger border_order_new = [pThis->GetBorderWindow() orderedIndex];
+        if (border_order_old != border_order_new) {
+          RTC_LOG(LS_WARNING) << "border order change: " << border_order_old << " => " << border_order_new;
+        }
+        
+        NSRect border_rect =  [pThis->GetBorderWindow() frame];
+        DesktopRect window_rect = GetWindowBounds(pThis->GetSourceId());
+        gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
+        NSRect source_rect = gfx::ScreenRectToNSRect(screen_rect);
+        if (!NSEqualRects(source_rect, border_rect)) {
+//          RTC_LOG(LS_WARNING) << "border_rect=" << " (" << border_rect.origin.x << ", " << border_rect.origin.y << ") " << border_rect.size.width << "x" << border_rect.size.height << ", source_rect=" << source_level<< " (" << source_rect.origin.x << ", " << source_rect.origin.y << ") " << source_rect.size.width << "x" << source_rect.size.height;
+          [pThis->GetBorderWindow() setFrame:source_rect display:YES];
+        }
+      }
+    });
+    dispatch_resume(timer);
+    window_timer_ = timer;
+  }
   return true;
 }
 

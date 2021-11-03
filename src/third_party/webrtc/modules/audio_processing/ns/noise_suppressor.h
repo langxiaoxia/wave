@@ -55,6 +55,7 @@ class NoiseSuppressor {
   const size_t num_bands_;
   const size_t num_channels_;
   bool rnn_enabled_ = false; //+by xxlang@2021-07-29
+  bool rnn_applyed_ = false; //+by xxlang@2021-07-29
   const SuppressionParams suppression_params_;
   int32_t num_analyzed_frames_ = -1;
   NrFft fft_;

@@ -392,10 +392,18 @@ void NoiseSuppressor::Analyze(const AudioBuffer& audio) {
 bool NoiseSuppressor::Process(AudioBuffer* audio) {
   //+by xxlang@2021-07-20 {
   if (rnn_enabled_ && audio->num_bands() == 3 && audio->num_frames() == 480) {
+    if (!rnn_applyed_) {
+      RTC_LOG(LS_WARNING) << "switch on rnnoise for noise_suppressor=" << this;
+      rnn_applyed_ = true;
+    }
     for (size_t ch = 0; ch < audio->num_channels(); ++ch) {
       channels_[ch]->rnn_ns_.Process(audio->channels()[ch], audio->channels_const()[ch]);
     }
     return true;
+  }
+  if (rnn_applyed_) {
+    RTC_LOG(LS_WARNING) << "switch off rnnoise for noise_suppressor=" << this;
+    rnn_applyed_ = false;
   }
   //+by xxlang@2021-07-20 }
 

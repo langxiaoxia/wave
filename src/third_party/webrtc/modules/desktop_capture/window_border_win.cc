@@ -9,7 +9,7 @@
 #include "rtc_base/logging.h"
 #include "rtc_base/win32.h"
 
-//#define USE_GDIPLUS
+#define USE_GDIPLUS
 
 #ifdef USE_GDIPLUS
 namespace Gdiplus {

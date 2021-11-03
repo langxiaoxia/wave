@@ -164,9 +164,18 @@ bool GetCroppedWindowRect(HWND window,
     // it'd clip the edges of captured pop-up windows without this border).
     LONG style = GetWindowLong(window, GWL_STYLE);
     if ((style & WS_THICKFRAME || style & DS_MODALFRAME) && style & WS_BORDER) { //*by xxlang@2021-10-12
-      int width = GetSystemMetrics(SM_CXSIZEFRAME);
-      int bottom_height = GetSystemMetrics(SM_CYSIZEFRAME);
-      const int visible_border_height = GetSystemMetrics(SM_CYBORDER);
+      UINT dpi = 96;
+      typedef UINT(WINAPI * GetDpiForWindowFunc)(HWND);
+      GetDpiForWindowFunc get_dpi_for_window = reinterpret_cast<GetDpiForWindowFunc>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
+      if (get_dpi_for_window) {
+        dpi = (*get_dpi_for_window)(window);
+        if (0 == dpi) {
+          dpi = 96;
+        }
+      }
+      int width = GetSystemMetrics(SM_CXSIZEFRAME) * dpi / 96;
+      int bottom_height = GetSystemMetrics(SM_CYSIZEFRAME) * dpi / 96;
+      const int visible_border_height = GetSystemMetrics(SM_CYBORDER) * dpi / 96;
       int top_height = visible_border_height;
       //+by xxlang@2021-10-08 {
       if (is_maximized) {
@@ -179,8 +188,8 @@ bool GetCroppedWindowRect(HWND window,
       // window (where a partially-transparent border may expose the
       // background a bit).
       if (avoid_cropping_border  && !is_maximized) { //*by xxlang@2021-10-08
-        width = std::max(0, width - GetSystemMetrics(SM_CXBORDER));
-        bottom_height = std::max(0, bottom_height - visible_border_height);
+        width = std::max(0, int((GetSystemMetrics(SM_CXSIZEFRAME) - GetSystemMetrics(SM_CXBORDER)) * dpi / 96));
+        bottom_height = std::max(0, int((GetSystemMetrics(SM_CYSIZEFRAME) - GetSystemMetrics(SM_CYBORDER)) * dpi / 96));
         top_height = 0;
       }
       cropped_rect->Extend(-width, -top_height, -width, -bottom_height);

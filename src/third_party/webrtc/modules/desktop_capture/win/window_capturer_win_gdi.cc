@@ -93,7 +93,9 @@ BOOL CALLBACK OwnedWindowCollector(HWND hwnd, LPARAM param) {
   return TRUE;
 }
 
-WindowCapturerWinGdi::WindowCapturerWinGdi() {}
+WindowCapturerWinGdi::WindowCapturerWinGdi() {
+  RTC_LOG(LS_INFO) << "DWM composition is " << (window_capture_helper_.IsAeroEnabled() ? "enabled" : "disabled");
+}
 WindowCapturerWinGdi::~WindowCapturerWinGdi() {}
 
 bool WindowCapturerWinGdi::GetSourceList(SourceList* sources) {

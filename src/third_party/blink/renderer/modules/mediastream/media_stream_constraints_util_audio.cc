@@ -740,7 +740,7 @@ class ProcessingBasedContainer {
         BoolSet(), /* goog_audio_mirroring_set */
         BoolSet(), /* goog_experimental_echo_cancellation_set */
         BoolSet(), /* goog_noise_suppression_set */
-        BoolSet(), /* goog_rnn_noise_suppression_set */
+        BoolSet(), /* +by xxlang@2021-07-29 : goog_rnn_noise_suppression_set */
         BoolSet(), /* goog_experimental_noise_suppression_set */
         BoolSet(), /* goog_highpass_filter_set */
         IntRangeSet::FromValue(GetSampleSize()),    /* sample_size_range */
@@ -768,7 +768,7 @@ class ProcessingBasedContainer {
         BoolSet(),        /* goog_audio_mirroring_set */
         BoolSet({false}), /* goog_experimental_echo_cancellation_set */
         BoolSet({false}), /* goog_noise_suppression_set */
-        BoolSet({false}), /* goog_rnn_noise_suppression_set */
+        BoolSet({false}), /* +by xxlang@2021-07-29 : goog_rnn_noise_suppression_set */
         BoolSet({false}), /* goog_experimental_noise_suppression_set */
         BoolSet({false}), /* goog_highpass_filter_set */
         IntRangeSet::FromValue(GetSampleSize()), /* sample_size_range */
@@ -795,7 +795,7 @@ class ProcessingBasedContainer {
         BoolSet({false}), /* goog_audio_mirroring_set */
         BoolSet({false}), /* goog_experimental_echo_cancellation_set */
         BoolSet({false}), /* goog_noise_suppression_set */
-        BoolSet({false}), /* goog_rnn_noise_suppression_set */
+        BoolSet({false}), /* +by xxlang@2021-07-29 : goog_rnn_noise_suppression_set */
         BoolSet({false}), /* goog_experimental_noise_suppression_set */
         BoolSet({false}), /* goog_highpass_filter_set */
         IntRangeSet::FromValue(GetSampleSize()), /* sample_size_range */

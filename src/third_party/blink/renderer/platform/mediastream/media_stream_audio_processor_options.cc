@@ -115,7 +115,7 @@ bool AudioProcessingProperties::HasSameNonReconfigurableSettings(
              other.goog_experimental_echo_cancellation &&
          goog_typing_noise_detection == other.goog_typing_noise_detection &&
          goog_noise_suppression == other.goog_noise_suppression &&
-         goog_rnn_noise_suppression == other.goog_rnn_noise_suppression &&
+         goog_rnn_noise_suppression == other.goog_rnn_noise_suppression && //+by xxlang@2021-07-29
          goog_experimental_noise_suppression ==
              other.goog_experimental_noise_suppression &&
          goog_highpass_filter == other.goog_highpass_filter &&
@@ -292,7 +292,7 @@ void PopulateApmConfig(
     apm_config->noise_suppression.level =
         noise_suppression_level.value_or(NoiseSuppression::kHigh);
     if (properties.goog_rnn_noise_suppression) {
-      apm_config->noise_suppression.rnn_enabled = true;
+      apm_config->noise_suppression.rnn_enabled = true; //+by xxlang@2021-07-29
     }
   }
 

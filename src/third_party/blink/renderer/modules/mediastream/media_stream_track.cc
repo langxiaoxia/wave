@@ -625,6 +625,10 @@ MediaTrackSettings* MediaStreamTrack::getSettings() const {
     settings->setAutoGainControl(*platform_settings.auto_gain_control);
   if (platform_settings.noise_supression)
     settings->setNoiseSuppression(*platform_settings.noise_supression);
+  //+by xxlang@2021-09-24 {
+  if (platform_settings.rnn_noise_supression)
+    settings->setRnnNoiseSuppression(*platform_settings.rnn_noise_supression);
+  //+by xxlang@2021-09-24 }
 
   if (platform_settings.HasSampleRate())
     settings->setSampleRate(platform_settings.sample_rate);

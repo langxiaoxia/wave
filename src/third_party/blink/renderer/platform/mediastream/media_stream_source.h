@@ -101,7 +101,8 @@ class PLATFORM_EXPORT MediaStreamSource final
 
   void SetAudioProcessingProperties(EchoCancellationMode echo_cancellation_mode,
                                     bool auto_gain_control,
-                                    bool noise_supression);
+                                    bool noise_supression,
+                                    bool rnn_noise_supression); //+by xxlang@2021-09-26
 
   void GetSettings(MediaStreamTrackPlatform::Settings&);
 
@@ -168,6 +169,7 @@ class PLATFORM_EXPORT MediaStreamSource final
   base::Optional<EchoCancellationMode> echo_cancellation_mode_;
   base::Optional<bool> auto_gain_control_;
   base::Optional<bool> noise_supression_;
+  base::Optional<bool> rnn_noise_supression_; //+by xxlang@2021-09-26
 };
 
 typedef HeapVector<Member<MediaStreamSource>> MediaStreamSourceVector;

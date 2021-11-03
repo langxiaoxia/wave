@@ -362,7 +362,7 @@ MediaTrackConstraintSetPlatform::MediaTrackConstraintSetPlatform()
       goog_auto_gain_control("autoGainControl"),
       goog_experimental_auto_gain_control("googExperimentalAutoGainControl"),
       goog_noise_suppression("noiseSuppression"),
-      goog_rnn_noise_suppression("googRnnNoiseSuppression"), //+by xxlang@2021-07-29
+      goog_rnn_noise_suppression("rnnNoiseSuppression"), //+by xxlang@2021-07-29
       goog_highpass_filter("googHighpassFilter"),
       goog_experimental_noise_suppression("googExperimentalNoiseSuppression"),
       goog_audio_mirroring("googAudioMirroring"),

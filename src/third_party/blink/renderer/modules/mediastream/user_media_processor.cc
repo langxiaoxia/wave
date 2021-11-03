@@ -268,7 +268,8 @@ void SurfaceAudioProcessingSettings(MediaStreamSource* source) {
 
     source->SetAudioProcessingProperties(echo_cancellation_mode,
                                          properties.goog_auto_gain_control,
-                                         properties.goog_noise_suppression);
+                                         properties.goog_noise_suppression,
+                                         properties.goog_rnn_noise_suppression); //+by xxlang@2021-09-26
   } else {
     // If the source is not a processed source, it could still support system
     // echo cancellation. Surface that if it does.
@@ -279,7 +280,7 @@ void SurfaceAudioProcessingSettings(MediaStreamSource* source) {
             ? MediaStreamSource::EchoCancellationMode::kSystem
             : MediaStreamSource::EchoCancellationMode::kDisabled;
 
-    source->SetAudioProcessingProperties(echo_cancellation_mode, false, false);
+    source->SetAudioProcessingProperties(echo_cancellation_mode, false, false, false); //+by xxlang@2021-09-26
   }
 }
 

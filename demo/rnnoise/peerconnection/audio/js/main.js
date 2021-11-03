@@ -94,6 +94,15 @@ function gotStream(stream) {
   const audioTracks = localStream.getAudioTracks();
   if (audioTracks.length > 0) {
     console.log(`Using Audio device: ${audioTracks[0].label}`);
+
+    capabilities = audioTracks[0].getCapabilities();
+    console.warn('capabilities:', capabilities);
+
+    constraints = audioTracks[0].getConstraints();
+    console.warn('constraints:', constraints);
+
+    settings = audioTracks[0].getSettings();
+    console.warn('settings:', settings);
   }
   localStream.getTracks().forEach(track => pc1.addTrack(track, localStream));
   console.log('Adding Local Stream to peer connection');
@@ -405,4 +414,11 @@ if (window.RTCRtpReceiver && ('getSynchronizationSources' in window.RTCRtpReceiv
     }
   };
   window.requestAnimationFrame(getAudioLevel);
+}
+
+const supports = navigator.mediaDevices.getSupportedConstraints();
+console.warn('supports:', supports);
+if (!supports["rnnNoiseSuppression"]) {
+	console.warn('rnnNoiseSuppression unsupported');
+	document.querySelector('#rnnNoiseSuppression').disabled = true;
 }

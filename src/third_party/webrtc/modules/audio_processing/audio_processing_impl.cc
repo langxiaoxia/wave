@@ -1955,6 +1955,7 @@ void AudioProcessingImpl::InitializeGainController2() {
 }
 
 void AudioProcessingImpl::InitializeNoiseSuppressor() {
+  RTC_LOG(LS_WARNING) << "reset noise_suppressor=" << submodules_.noise_suppressor;
   submodules_.noise_suppressor.reset();
 
   if (config_.noise_suppression.enabled) {
@@ -1979,6 +1980,7 @@ void AudioProcessingImpl::InitializeNoiseSuppressor() {
     cfg.target_level = map_level(config_.noise_suppression.level);
     submodules_.noise_suppressor = std::make_unique<NoiseSuppressor>(
         cfg, proc_sample_rate_hz(), num_proc_channels(), config_.noise_suppression.rnn_enabled);
+    RTC_LOG(LS_WARNING) << "new noise_suppressor=" << submodules_.noise_suppressor;
   }
 }
 

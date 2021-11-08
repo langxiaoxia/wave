@@ -33,6 +33,7 @@ class WindowBorderWin : public WindowBorder {
   bool CreateForScreen(const DesktopRect &window_rect) override;
   bool IsCreated() override;
   void Destroy() override;
+  WindowId GetBorderId() override;
 
   HWND GetSourceWindow();
 
@@ -53,10 +54,8 @@ class WindowBorderWin : public WindowBorder {
 #define ID_UPDATE_TIMER 100
 
 #ifdef USE_GDIPLUS
-const int kBorderWidth = 5;
 #else // USE_GDIPLUS
-const int kBorderWidth = 2;
-const COLORREF kHighlightColor = RGB(255, 0, 0);
+const COLORREF kHighlightColor = RGB(WindowBorder::kBorderColorR, WindowBorder::kBorderColorG, WindowBorder::kBorderColorB);
 const COLORREF kTransparentColor = RGB(0, 0, 0);
 #endif // USE_GDIPLUS
 
@@ -85,8 +84,10 @@ void UpdateBorderWindow(HWND border_hwnd, const DesktopRect &window_rect) {
 
   // draw on bitmap
   Gdiplus::Graphics graphics(&bitmap);
-  Gdiplus::Pen pen(Gdiplus::Color(255, 255, 0, 0));
-  pen.SetWidth(kBorderWidth);
+  Gdiplus::Pen pen(Gdiplus::Color(255, WindowBorder::kBorderColorR, WindowBorder::kBorderColorG, WindowBorder::kBorderColorB));
+  pen.SetWidth((Gdiplus::REAL)WindowBorder::kBorderWidth);
+  pen.SetAlignment(Gdiplus::PenAlignment::PenAlignmentInset);
+  RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) PageUnit=" << graphics.GetPageUnit() << ", PageScale=" << graphics.GetPageScale() << ", Alignment=" << pen.GetAlignment();
   graphics.DrawRectangle(&pen, 0, 0, sizeDst.cx - 1, sizeDst.cy - 1);
 
   // select bitmap to dc
@@ -129,7 +130,7 @@ void UpdateBorderWindow(HWND border_hwnd, const DesktopRect &window_rect) {
 
   RECT client_rect = {0, 0, sizeDst.cx, sizeDst.cy};
   ::FillRect(hMemDC, &client_rect, ::CreateSolidBrush(kHighlightColor));
-  ::InflateRect(&client_rect, -kBorderWidth, -kBorderWidth);
+  ::InflateRect(&client_rect, -WindowBorder::kBorderWidth, -WindowBorder::kBorderWidth);
   ::FillRect(hMemDC, &client_rect, ::CreateSolidBrush(kTransparentColor));
 
   if (!::UpdateLayeredWindow(border_hwnd, hDC, &ptDst, &sizeDst, hMemDC, &ptSrc, kTransparentColor, NULL, ULW_COLORKEY)) {
@@ -267,12 +268,14 @@ LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     case WM_WINDOWPOSCHANGING:
     case WM_WINDOWPOSCHANGED:
     {
+/*
       WINDOWPOS wp = *(WINDOWPOS*)lParam;
       char sFlags[256];
       FlagString(wp.flags, sFlags);
       RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", hwndInsertAfter=" << wp.hwndInsertAfter
                        << ", x=" << wp.x << ", y=" << wp.y << ", cx=" << wp.cx << ", cy=" << wp.cy << ", flags=" << sFlags;
+*/
       break;
     }
 
@@ -414,6 +417,10 @@ void WindowBorderWin::Destroy() {
 #ifdef USE_GDIPLUS
   Gdiplus::GdiplusShutdown(gdiplusToken_);
 #endif // USE_GDIPLUS
+}
+
+WindowId WindowBorderWin::GetBorderId() {
+  return reinterpret_cast<WindowId>(border_hwnd_);
 }
 
 HWND WindowBorderWin::GetSourceWindow() {

@@ -158,7 +158,7 @@ ScreenCapturerMac::ScreenCapturerMac(
       window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-18
 {
   RTC_LOG(LS_INFO) << "Allow IOSurface: " << allow_iosurface;
-  RTC_LOG(LS_WARNING) << "ScreenCapturerMac " << (enable_border_ ? "with" : "without") << " window border";
+  RTC_LOG(LS_WARNING) << "ScreenCapturerMac " << (enable_border_ ? "with" : "without") << " border";
   thread_checker_.Detach();
 }
 
@@ -204,12 +204,16 @@ void ScreenCapturerMac::CaptureFrame() {
   int64_t capture_start_time_nanos = rtc::TimeNanos();
 
   //+by xxlang@2021-10-18 {
-  if (enable_border_ && !window_border_->IsCreated()) {
-    if (first_capture_) {
-      first_capture_ = false;
-    } else {
-      RTC_LOG(LS_WARNING) << "ScreenCapturerMac create border window for screen " << current_display_;
-      window_border_->CreateForScreen(screen_pixel_bounds_);
+  if (enable_border_) {
+    if (!window_border_->IsCreated()) {
+      if (first_capture_) {
+        first_capture_ = false;
+      } else {
+        RTC_LOG(LS_WARNING) << "ScreenCapturerMac create border for screen " << current_display_;
+        window_border_->CreateForScreen(screen_pixel_bounds_);
+      }
+    } else if (excluded_window_ == 0) {
+      SetExcludedWindow(window_border_->GetBorderId());
     }
   }
   //+by xxlang@2021-10-18 }
@@ -281,6 +285,7 @@ void ScreenCapturerMac::CaptureFrame() {
 }
 
 void ScreenCapturerMac::SetExcludedWindow(WindowId window) {
+  RTC_LOG(LS_WARNING) << "ScreenCapturerMac::SetExcludedWindow " << excluded_window_ << " => " << window;
   excluded_window_ = window;
 }
 

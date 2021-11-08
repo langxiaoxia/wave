@@ -19,6 +19,12 @@ class WindowBorder {
   virtual bool CreateForScreen(const DesktopRect &window_rect) = 0;
   virtual bool IsCreated() = 0;
   virtual void Destroy() = 0;
+  virtual WindowId GetBorderId() = 0;
+
+  static const int kBorderWidth = 4;
+  static const unsigned char kBorderColorR = 0xEB;
+  static const unsigned char kBorderColorG = 0x4C;
+  static const unsigned char kBorderColorB = 0x46;
 };
 
 }  // namespace webrtc

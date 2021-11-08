@@ -33,11 +33,14 @@
 
 - (void)drawRect:(NSRect)dirtyRect {
 //  RTC_LOG(LS_INFO) << "BorderView drawRect dirtyRect=(" << dirtyRect.origin.x << ", " << dirtyRect.origin.y << ") " << dirtyRect.size.width << "x" << dirtyRect.size.height;
-  NSRect borderRect = NSInsetRect(self.frame, 1.0, 1.0);
+  NSRect borderRect = NSInsetRect(self.frame, (CGFloat)webrtc::WindowBorder::kBorderWidth / 2, (CGFloat)webrtc::WindowBorder::kBorderWidth / 2);
 //  RTC_LOG(LS_INFO) << "BorderView drawRect borderRect=(" << borderRect.origin.x << ", " << borderRect.origin.y << ") " << borderRect.size.width << "x" << borderRect.size.height;
-  [NSBezierPath setDefaultLineWidth:2.0];
+  [NSBezierPath setDefaultLineWidth:(CGFloat)webrtc::WindowBorder::kBorderWidth];
   NSBezierPath *path = [NSBezierPath bezierPathWithRect:borderRect];
-  [[NSColor redColor] setStroke];
+  [[NSColor colorWithSRGBRed:(CGFloat)webrtc::WindowBorder::kBorderColorR / 0xff
+                       green:(CGFloat)webrtc::WindowBorder::kBorderColorG / 0xff
+                        blue:(CGFloat)webrtc::WindowBorder::kBorderColorB / 0xff
+                       alpha:1.0] setStroke];
   [path stroke];
 }
 
@@ -70,6 +73,7 @@ class WindowBorderMac : public WindowBorder {
   bool CreateForScreen(const DesktopRect &window_rect) override;
   bool IsCreated() override;
   void Destroy() override;
+  WindowId GetBorderId() override;
 
   CGWindowID GetSourceId();
   NSWindow *GetBorderWindow();
@@ -127,6 +131,14 @@ void WindowBorderMac::Destroy() {
   }
 
   source_id_ = kCGNullWindowID;
+}
+
+WindowId WindowBorderMac::GetBorderId() {
+  if (border_window_ != nil) {
+    return [border_window_ windowNumber];
+  } else {
+    return 0;
+  }
 }
 
 CGWindowID WindowBorderMac::GetSourceId() {

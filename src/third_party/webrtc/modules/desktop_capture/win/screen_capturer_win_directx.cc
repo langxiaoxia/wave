@@ -98,21 +98,14 @@ int ScreenCapturerWinDirectx::GetIndexFromScreenId(
   return -1;
 }
 
-ScreenCapturerWinDirectx::ScreenCapturerWinDirectx(bool enable_border)
-    : controller_(DxgiDuplicatorController::Instance()),
-      enable_border_(enable_border), //+by xxlang@2021-09-28
-      first_capture_(true), //+by xxlang@2021-09-28
-      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
-{
-  RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx " << (enable_border_ ? "with" : "without") << " window border";
-}
+ScreenCapturerWinDirectx::ScreenCapturerWinDirectx()
+    : controller_(DxgiDuplicatorController::Instance()) {}
 
 ScreenCapturerWinDirectx::~ScreenCapturerWinDirectx() = default;
 
 void ScreenCapturerWinDirectx::Start(Callback* callback) {
   RTC_DCHECK(!callback_);
   RTC_DCHECK(callback);
-  RTC_LOG(LS_INFO) << "ScreenCapturerWinDirectx::Start current_screen_id=" << current_screen_id_;
 
   callback_ = callback;
 }
@@ -127,22 +120,6 @@ void ScreenCapturerWinDirectx::CaptureFrame() {
   TRACE_EVENT0("webrtc", "ScreenCapturerWinDirectx::CaptureFrame");
 
   int64_t capture_start_time_nanos = rtc::TimeNanos();
-
-  //+by xxlang@2021-09-28 {
-  if (enable_border_ && !window_border_->IsCreated()) {
-    if (first_capture_) {
-      first_capture_ = false;
-    } else {
-      std::wstring current_device_key;
-      bool valid = IsScreenValid(current_screen_id_, &current_device_key);
-      if (valid) {
-        RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx create border window for screen " << current_screen_id_;
-        window_border_->CreateForScreen(GetScreenRect(current_screen_id_, current_device_key));
-      }
-    }
-  }
-  //+by xxlang@2021-09-28 }
-
 
   frames_.MoveToNextFrame();
   if (!frames_.current_frame()) {
@@ -216,7 +193,12 @@ bool ScreenCapturerWinDirectx::GetSourceList(SourceList* sources) {
 
 bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
   if (id == kFullDesktopScreenId) {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx::SelectSource " << current_screen_id_ << " => " << id;
+    //+by xxlang@2021-11-08 {
+    if (!IsScreenValid(id, &current_device_key_)) {
+      return false;
+    }
+    //+by xxlang@2021-11-08 }
+
     current_screen_id_ = id;
     return true;
   }
@@ -232,16 +214,20 @@ bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
     return false;
   }
 
-  //+by xxlang@2021-09-28 {
-  RTC_LOG(LS_WARNING) << "ScreenCapturerWinDirectx::SelectSource " << current_screen_id_ << " => " << index;
-  if (current_screen_id_ != index) {
-    window_border_->Destroy();
-    first_capture_ = true;
+  //+by xxlang@2021-11-08 {
+  if (!IsScreenValid(index, &current_device_key_)) {
+    return false;
   }
-  //+by xxlang@2021-09-28 }
+  //+by xxlang@2021-11-08 }
 
   current_screen_id_ = index;
   return true;
 }
+
+//+by xxlang@2021-11-08 {
+DesktopRect ScreenCapturerWinDirectx::GetSelectedScreenRect() {
+  return GetScreenRect(current_screen_id_, current_device_key_);
+}
+//+by xxlang@2021-11-08 }
 
 }  // namespace webrtc

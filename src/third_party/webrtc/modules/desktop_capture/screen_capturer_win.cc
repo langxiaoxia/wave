@@ -24,8 +24,8 @@ namespace webrtc {
 
 namespace {
 
-std::unique_ptr<DesktopCapturer> CreateScreenCapturerWinDirectx(bool enable_border) {
-  std::unique_ptr<DesktopCapturer> capturer(new ScreenCapturerWinDirectx(enable_border));
+std::unique_ptr<DesktopCapturer> CreateScreenCapturerWinDirectx() {
+  std::unique_ptr<DesktopCapturer> capturer(new ScreenCapturerWinDirectx());
   capturer.reset(new BlankDetectorDesktopCapturerWrapper(
       std::move(capturer), RgbaColor(0, 0, 0, 0)));
   return capturer;
@@ -43,7 +43,7 @@ std::unique_ptr<DesktopCapturer> DesktopCapturer::CreateRawScreenCapturer(
     auto dxgi_duplicator_controller = DxgiDuplicatorController::Instance();
     if (ScreenCapturerWinDirectx::IsSupported()) {
       capturer.reset(new FallbackDesktopCapturerWrapper(
-          CreateScreenCapturerWinDirectx(options.enable_border()), std::move(capturer)));
+          CreateScreenCapturerWinDirectx(), std::move(capturer), options.enable_border()));
     }
   }
 
@@ -53,7 +53,8 @@ std::unique_ptr<DesktopCapturer> DesktopCapturer::CreateRawScreenCapturer(
     // systems. So we may need to fallback to use original capturer.
     capturer.reset(new FallbackDesktopCapturerWrapper(
         std::unique_ptr<DesktopCapturer>(new ScreenCapturerWinMagnifier()),
-        std::move(capturer)));
+        std::move(capturer),
+        options.enable_border()));
   }
 
   return capturer;

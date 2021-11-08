@@ -96,7 +96,7 @@ WindowCapturerMac::WindowCapturerMac(
       first_capture_(true), //+by xxlang@2021-10-21
       window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-21
 {
-  RTC_LOG(LS_WARNING) << "WindowCapturerMac " << (enable_border_ ? "with" : "without") << " window border";
+  RTC_LOG(LS_WARNING) << "WindowCapturerMac " << (enable_border_ ? "with" : "without") << " border";
 }
 
 WindowCapturerMac::~WindowCapturerMac() {}
@@ -186,7 +186,7 @@ void WindowCapturerMac::CaptureFrame() {
     if (first_capture_) {
       first_capture_ = false;
     } else {
-      RTC_LOG(LS_WARNING) << "WindowCapturerMac create border window for window " << window_id_;
+      RTC_LOG(LS_WARNING) << "WindowCapturerMac create border for window " << window_id_;
       window_border_->CreateForWindow(window_id_);
     }
   }

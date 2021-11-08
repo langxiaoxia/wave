@@ -87,6 +87,7 @@ BOOL CALLBACK OwnedWindowCollector(HWND hwnd, LPARAM param) {
       context->window_capture_helper()->LogWindow(hwnd, "OwnedWindowCollector(skip layered window)");
       return TRUE;
     }
+
     context->owned_windows->push_back(hwnd);
   }
 

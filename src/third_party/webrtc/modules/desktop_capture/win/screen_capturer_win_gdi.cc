@@ -38,13 +38,7 @@ const wchar_t kDwmapiLibraryName[] = L"dwmapi.dll";
 }  // namespace
 
 ScreenCapturerWinGdi::ScreenCapturerWinGdi(
-    const DesktopCaptureOptions& options)
-    : enable_border_(options.enable_border()), //+by xxlang@2021-09-28
-      first_capture_(true), //+by xxlang@2021-09-28
-      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
-{
-  RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi " << (enable_border_ ? "with" : "without") << " window border";
-
+    const DesktopCaptureOptions& options) {
   if (options.disable_effects()) {
     // Load dwmapi.dll dynamically since it is not available on XP.
     if (!dwmapi_library_)
@@ -110,24 +104,20 @@ bool ScreenCapturerWinGdi::GetSourceList(SourceList* sources) {
 
 bool ScreenCapturerWinGdi::SelectSource(SourceId id) {
   bool valid = IsScreenValid(id, &current_device_key_);
-  if (valid) {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::SelectSource " << current_screen_id_ << " => " << id;
-    //+by xxlang@2021-09-28 {
-    if (current_screen_id_ != id) {
-      window_border_->Destroy();
-      first_capture_ = true;
-    }
-    //+by xxlang@2021-09-28 }
-
+  if (valid)
     current_screen_id_ = id;
-  }
   return valid;
 }
 
+//+by xxlang@2021-11-08 {
+DesktopRect ScreenCapturerWinGdi::GetSelectedScreenRect() {
+  return GetScreenRect(current_screen_id_, current_device_key_);
+}
+
+//+by xxlang@2021-11-08 }
 void ScreenCapturerWinGdi::Start(Callback* callback) {
   RTC_DCHECK(!callback_);
   RTC_DCHECK(callback);
-  RTC_LOG(LS_INFO) << "ScreenCapturerWinGdi::Start current_screen_id=" << current_screen_id_;
 
   callback_ = callback;
 
@@ -143,12 +133,6 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
   // one.
   std::unique_ptr<Desktop> input_desktop(Desktop::GetInputDesktop());
   if (input_desktop && !desktop_.IsSame(*input_desktop)) {
-    //+by xxlang@2021-09-28 {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::input_desktop_changed";
-    window_border_->Destroy();
-    first_capture_ = true;
-    //+by xxlang@2021-09-28 }
-
     // Release GDI resources otherwise SetThreadDesktop will fail.
     if (desktop_dc_) {
       ReleaseDC(NULL, desktop_dc_);
@@ -173,12 +157,6 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
 
   // If the display configurations have changed then recreate GDI resources.
   if (display_configuration_monitor_.IsChanged()) {
-    //+by xxlang@2021-09-28 {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi::display_configuration_monitor_changed";
-    window_border_->Destroy();
-    first_capture_ = true;
-    //+by xxlang@2021-09-28 }
-
     if (desktop_dc_) {
       ReleaseDC(NULL, desktop_dc_);
       desktop_dc_ = nullptr;
@@ -201,17 +179,6 @@ void ScreenCapturerWinGdi::PrepareCaptureResources() {
     // Make sure the frame buffers will be reallocated.
     queue_.Reset();
   }
-
-  //+by xxlang@2021-09-28 {
-  if (enable_border_ && !window_border_->IsCreated()) {
-    if (first_capture_) {
-      first_capture_ = false;
-    } else {
-      RTC_LOG(LS_WARNING) << "ScreenCapturerWinGdi create border window for screen " << current_screen_id_;
-      window_border_->CreateForScreen(GetScreenRect(current_screen_id_, current_device_key_));
-    }
-  }
-  //+by xxlang@2021-09-28 }
 }
 
 bool ScreenCapturerWinGdi::CaptureImage() {

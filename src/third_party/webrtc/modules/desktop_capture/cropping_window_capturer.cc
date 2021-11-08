@@ -31,7 +31,7 @@ CroppingWindowCapturer::CroppingWindowCapturer(
       first_capture_(true), //+by xxlang@2021-09-28
       window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-15
 {
-  RTC_LOG(LS_WARNING) << "CroppingWindowCapturer " << (enable_border_ ? "with" : "without") << " window border";
+  RTC_LOG(LS_WARNING) << "CroppingWindowCapturer " << (enable_border_ ? "with" : "without") << " border";
   options_.set_enable_border(false);
   window_capturer_ = DesktopCapturer::CreateRawWindowCapturer(options_);
 }
@@ -54,7 +54,7 @@ void CroppingWindowCapturer::CaptureFrame() {
     if (first_capture_) {
       first_capture_ = false;
     } else {
-      RTC_LOG(LS_WARNING) << "CroppingWindowCapturer create border window for window " << selected_window_;
+      RTC_LOG(LS_WARNING) << "CroppingWindowCapturer create border for window " << selected_window_;
       window_border_->CreateForWindow(selected_window_);
     }
   }

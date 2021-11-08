@@ -23,7 +23,6 @@
 #include "modules/desktop_capture/screen_capture_frame_queue.h"
 #include "modules/desktop_capture/win/dxgi_duplicator_controller.h"
 #include "modules/desktop_capture/win/dxgi_frame.h"
-#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-10-15
 #include "rtc_base/system/rtc_export.h"
 
 namespace webrtc {
@@ -70,7 +69,7 @@ class RTC_EXPORT ScreenCapturerWinDirectx : public DesktopCapturer {
   static int GetIndexFromScreenId(ScreenId id,
                                   const std::vector<std::string>& device_names);
 
-  explicit ScreenCapturerWinDirectx(bool enable_border);
+  explicit ScreenCapturerWinDirectx();
 
   ~ScreenCapturerWinDirectx() override;
 
@@ -81,6 +80,7 @@ class RTC_EXPORT ScreenCapturerWinDirectx : public DesktopCapturer {
   void CaptureFrame() override;
   bool GetSourceList(SourceList* sources) override;
   bool SelectSource(SourceId id) override;
+  DesktopRect GetSelectedScreenRect() override; //+by xxlang@2021-11-08
 
  private:
   const rtc::scoped_refptr<DxgiDuplicatorController> controller_;
@@ -88,12 +88,7 @@ class RTC_EXPORT ScreenCapturerWinDirectx : public DesktopCapturer {
   std::unique_ptr<SharedMemoryFactory> shared_memory_factory_;
   Callback* callback_ = nullptr;
   SourceId current_screen_id_ = kFullDesktopScreenId;
-
-  //+by xxlang@2021-09-28 {
-  bool enable_border_;
-  bool first_capture_;
-  std::unique_ptr<WindowBorder> window_border_;
-//+by xxlang@2021-09-28 }
+  std::wstring current_device_key_; //+by xxlang@2021-11-08
 
   RTC_DISALLOW_COPY_AND_ASSIGN(ScreenCapturerWinDirectx);
 };

@@ -88,7 +88,7 @@ void UpdateBorderWindow(HWND border_hwnd, const DesktopRect &window_rect) {
   pen.SetWidth((Gdiplus::REAL)WindowBorder::kBorderWidth);
   pen.SetAlignment(Gdiplus::PenAlignment::PenAlignmentInset);
   RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) PageUnit=" << graphics.GetPageUnit() << ", PageScale=" << graphics.GetPageScale() << ", Alignment=" << pen.GetAlignment();
-  graphics.DrawRectangle(&pen, 0, 0, sizeDst.cx - 1, sizeDst.cy - 1);
+  graphics.DrawRectangle(&pen, 0, 0, sizeDst.cx, sizeDst.cy);
 
   // select bitmap to dc
   HDC hMemDC = ::CreateCompatibleDC(NULL);

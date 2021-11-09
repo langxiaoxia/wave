@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>frameRate control</title>
+    <link rel="shortcut icon" href="#"/>
+    <link rel="stylesheet" href="../../../css/index.css"/>
+    <link rel="stylesheet" href="../index.css"/>
+    <script src="../../../js/mediaDevice.js"></script>
+    <script src="../../../js/sdp_tools.js"></script>
+</head>
+
+<body>
+
+<div id="container">
+    <h1>Bandwidth control demo</h1>
+    <section id="constraints">
+        <div class="tips">
+            <span>encoding maxBitrate：</span>
+            <input type="text" id="maxBitrate" value=8000>
+        </div>
+        <div class="tips">
+            <span>b=TIAS|AS：</span>
+            <input type="text" id="ASBitrate" value=8000000>
+        </div>
+        <div class="tips">
+            <span>Enable remb && transport-cc：</span>
+            <select name="" id="rembAndTransportCC" onchange="setXGoogleSelect()">
+                <option value=true>true</option>
+                <option value=false>false</option>
+            </select>
+        </div>
+        <div class="x-google-set">
+            <div class="tips">
+                <span>x-google-min-bitrate：</span>
+                <input type="text" id="xGoogleMinBitrate" value=100>
+            </div>
+            <div class="tips">
+                <span>x-google-start-bitrate：</span>
+                <input type="text" id="xGoogleStartBitrate" value=2000>
+            </div>
+            <div class="tips">
+                <span>x-google-max-bitrate：</span>
+                <input type="text" id="xGoogleBitrate" value=8000>
+            </div>
+        </div>
+    </section>
+
+    <div>
+        <button id="gum" onclick="getVideoMedia()">getUserMedia</button>
+        <button id="getScreenCapture" onclick="getScreenCapture()">getDisplayMedia</button>
+        <button id="connect" onclick="createPeerConnection()">连接</button>
+        <button id="hangup" disabled onclick="hangup()">挂断</button>
+    </div>
+
+    <section id="video">
+        <div id="localVideo">
+            <h2>localVideo</h2>
+            <video playsinline autoplay muted></video>
+            <div></div>
+            <div id="local_framesPerSecond"></div>
+            <div id="send_packetsLost"></div>
+        </div>
+        <div id="remoteVideo">
+            <h2>remoteVideo</h2>
+            <video playsinline autoplay muted></video>
+            <div></div>
+            <div id="remote_framesPerSecond"></div>
+            <div id="recv_packetsLost"></div>
+            <div id="bitrate"></div>
+            <div id="peer"></div>
+        </div>
+    </section>
+
+    <section id="statistics">
+        <div id="senderStats"></div>
+        <div id="receiverStats"></div>
+    </section>
+</div>
+
+<script src="../bitrateControl.js"></script>
+<script src="render.js"></script>
+</body>
+</html>

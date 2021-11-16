@@ -89,6 +89,7 @@ class RTC_EXPORT ScreenCapturerWinDirectx : public DesktopCapturer {
   Callback* callback_ = nullptr;
   SourceId current_screen_id_ = kFullDesktopScreenId;
   std::wstring current_device_key_; //+by xxlang@2021-11-08
+  int current_screen_index_ = kFullDesktopScreenId; //+by xxlang@2021-11-16
 
   RTC_DISALLOW_COPY_AND_ASSIGN(ScreenCapturerWinDirectx);
 };

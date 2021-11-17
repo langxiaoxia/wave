@@ -378,9 +378,6 @@ bool WindowBorderWin::CreateForWindow(DesktopCapturer::SourceId source_id) {
                       << ", " << original_rect.right()
                       << ", " << original_rect.bottom();
 
-  ::BringWindowToTop(hwnd);
-  ::SetForegroundWindow(hwnd);
-
   if (!Create(cropped_rect, hwnd)) {
     return false;
   }

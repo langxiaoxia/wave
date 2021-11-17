@@ -132,7 +132,18 @@ bool WindowCapturerWinGdi::FocusOnSelectedSource() {
   if (!IsWindowValidAndVisible(window_))
     return false;
 
+#if 1 //+by xxlang@2021-11-17 {
+  RTC_LOG(LS_WARNING) << "WindowCapturerWinGdi::FocusOnSelectedSource() hwnd=" << window_;
+  if (!BringWindowToTop(window_)) {
+    RTC_LOG(LS_ERROR) << "BringWindowToTop Failed: error=" << GetLastError();
+  }
+  if (!SetForegroundWindow(window_)) {
+    RTC_LOG(LS_ERROR) << "SetForegroundWindow Failed: error=" << GetLastError();
+  }
+  return true;
+#else //+by xxlang@2021-11-17 }
   return BringWindowToTop(window_) && SetForegroundWindow(window_);
+#endif
 }
 
 bool WindowCapturerWinGdi::IsOccluded(const DesktopVector& pos) {

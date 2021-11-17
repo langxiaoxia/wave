@@ -293,6 +293,24 @@ LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
   return DefWindowProc(hwnd, msg, wParam, lParam);
 }
 
+// set hTarget before hSource.
+void SetWindowBefore(HWND hTarget, HWND hSource) {
+  HWND hInsertAfter = ::GetWindow(hSource, GW_HWNDPREV);
+  if (NULL == hInsertAfter) {
+    RTC_LOG(LS_ERROR) << "GetWindow Failed: error=" << GetLastError() << ", hWnd=" << hSource;
+    return;
+  }
+
+  if (hInsertAfter != hTarget) {
+    UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
+    char sFlags[256];
+    FlagString(uFlags, sFlags);
+    if (!::SetWindowPos(hTarget, hInsertAfter, 0, 0, 0, 0, uFlags)) {
+      return SetWindowBefore(hTarget, hInsertAfter);
+    }
+  }
+}
+
 VOID CALLBACK UpdateScreenTimerProc(HWND border_hwnd, UINT message, UINT idTimer, DWORD dwTime) {
   UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
   char sFlags[256];
@@ -320,17 +338,7 @@ VOID CALLBACK UpdateWindowTimerProc(HWND border_hwnd, UINT message, UINT idTimer
     return;
   }
 
-  HWND hInsertAfter = ::GetWindow(source_hwnd, GW_HWNDPREV);
-  if (hInsertAfter != border_hwnd) {
-    UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
-    char sFlags[256];
-    FlagString(uFlags, sFlags);
-    if (::SetWindowPos(border_hwnd, hInsertAfter, 0, 0, 0, 0, uFlags)) {
-      RTC_LOG(LS_INFO) << "SetWindowPos OK: hInsertAfter=" << hInsertAfter << ", flags=" << sFlags;
-    } else {
-      RTC_LOG(LS_ERROR) << "SetWindowPos Failed: error=" << GetLastError() << ", hInsertAfter=" << hInsertAfter << ", flags=" << sFlags;
-    }
-  }
+  SetWindowBefore(border_hwnd, source_hwnd);
 
   DesktopRect window_rect, cropped_rect;
   if (!GetWindowRect(border_hwnd, &window_rect)) {
@@ -369,6 +377,10 @@ bool WindowBorderWin::CreateForWindow(DesktopCapturer::SourceId source_id) {
                       << ", " << original_rect.top()
                       << ", " << original_rect.right()
                       << ", " << original_rect.bottom();
+
+  ::BringWindowToTop(hwnd);
+  ::SetForegroundWindow(hwnd);
+
   if (!Create(cropped_rect, hwnd)) {
     return false;
   }

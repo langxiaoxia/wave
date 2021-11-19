@@ -20,6 +20,7 @@
 #include "modules/desktop_capture/shared_desktop_frame.h"
 #include "modules/desktop_capture/win/display_configuration_monitor.h"
 #include "modules/desktop_capture/win/scoped_thread_desktop.h"
+#include "modules/desktop_capture/window_border.h" //+by xxlang@2021-11-18
 #include "rtc_base/constructor_magic.h"
 
 namespace webrtc {
@@ -43,6 +44,7 @@ class ScreenCapturerWinGdi : public DesktopCapturer {
   bool GetSourceList(SourceList* sources) override;
   bool SelectSource(SourceId id) override;
   DesktopRect GetSelectedScreenRect() override; //+by xxlang@2021-11-08
+  void EnableBorder(bool) override; //+by xxlang@2021-11-18
 
  private:
   typedef HRESULT(WINAPI* DwmEnableCompositionFunc)(UINT);
@@ -75,6 +77,12 @@ class ScreenCapturerWinGdi : public DesktopCapturer {
 
   HMODULE dwmapi_library_ = NULL;
   DwmEnableCompositionFunc composition_func_ = nullptr;
+
+  //+by xxlang@2021-11-18 {
+  bool enable_border_;
+  bool first_capture_;
+  std::unique_ptr<WindowBorder> window_border_;
+  //+by xxlang@2021-11-18 }
 
   RTC_DISALLOW_COPY_AND_ASSIGN(ScreenCapturerWinGdi);
 };

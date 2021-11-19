@@ -117,6 +117,7 @@ class RTC_EXPORT DesktopCapturer {
   virtual bool SelectSource(SourceId id);
 
   virtual DesktopRect GetSelectedScreenRect(); //+by xxlang@2021-11-08
+  virtual void EnableBorder(bool); //+by xxlang@2021-11-18
 
   // Brings the selected source to the front and sets the input focus on it.
   // Returns false in case of a failure or no source has been selected or the

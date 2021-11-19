@@ -135,6 +135,7 @@ bool ScreenCapturerWinMagnifier::SelectSource(SourceId id) {
 
 //+by xxlang@2021-11-08 {
 DesktopRect ScreenCapturerWinMagnifier::GetSelectedScreenRect() {
+  RTC_LOG(LS_INFO) << "ScreenCapturerWinMagnifier GetSelectedScreenRect";
   return GetScreenRect(current_screen_id_, current_device_key_);
 }
 //+by xxlang@2021-11-08 }

@@ -17,6 +17,7 @@
 #include "modules/desktop_capture/desktop_geometry.h"
 #include "modules/desktop_capture/desktop_region.h"
 #include "rtc_base/checks.h"
+#include "rtc_base/logging.h"
 #include "system_wrappers/include/metrics.h"
 
 namespace webrtc {
@@ -61,6 +62,7 @@ bool BlankDetectorDesktopCapturerWrapper::SelectSource(SourceId id) {
 
 //+by xxlang@2021-11-08 {
 DesktopRect BlankDetectorDesktopCapturerWrapper::GetSelectedScreenRect() {
+  RTC_LOG(LS_INFO) << "BlankDetectorDesktopCapturerWrapper GetSelectedScreenRect";
   return capturer_->GetSelectedScreenRect();
 }
 //+by xxlang@2021-11-08 }

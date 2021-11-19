@@ -71,15 +71,13 @@ std::unique_ptr<SharedMemory> SharedMemoryFactoryProxy::CreateSharedMemory(
 
 FallbackDesktopCapturerWrapper::FallbackDesktopCapturerWrapper(
     std::unique_ptr<DesktopCapturer> main_capturer,
-    std::unique_ptr<DesktopCapturer> secondary_capturer,
-    bool enable_border) //+by xxlang@2021-11-08
+    std::unique_ptr<DesktopCapturer> secondary_capturer)
     : main_capturer_(std::move(main_capturer)),
       secondary_capturer_(std::move(secondary_capturer)),
-      enable_border_(enable_border), //+by xxlang@2021-11-08
+      enable_border_(false), //+by xxlang@2021-11-18
       first_capture_(true), //+by xxlang@2021-11-08
       window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-11-08
 {
-  RTC_LOG(LS_WARNING) << "FallbackDesktopCapturerWrapper " << (enable_border_ ? "with" : "without") << " border";
   RTC_DCHECK(main_capturer_);
   RTC_DCHECK(secondary_capturer_);
 }
@@ -121,10 +119,11 @@ void FallbackDesktopCapturerWrapper::CaptureFrame() {
     if (first_capture_) {
       first_capture_ = false;
     } else {
-      RTC_LOG(LS_WARNING) << "FallbackDesktopCapturerWrapper create border for screen " << selected_screen_;
       if (main_capturer_permanent_error_) {
+        RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper secondary create border for screen " << selected_screen_;
         window_border_->CreateForScreen(secondary_capturer_->GetSelectedScreenRect());
       } else {
+        RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper main create border for screen " << selected_screen_;
         window_border_->CreateForScreen(main_capturer_->GetSelectedScreenRect());
       }
     }
@@ -154,7 +153,7 @@ bool FallbackDesktopCapturerWrapper::GetSourceList(SourceList* sources) {
 //+by xxlang@2021-11-08 {
 bool FallbackDesktopCapturerWrapper::SelectSource(SourceId id) {
   if (SelectSourceInternal(id)) {
-      RTC_LOG(LS_WARNING) << "FallbackDesktopCapturerWrapper::SelectSource " << selected_screen_ << " => " << id;
+      RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper::SelectSource " << selected_screen_ << " => " << id;
       if (selected_screen_ != id) {
         window_border_->Destroy();
         first_capture_ = true;
@@ -180,6 +179,23 @@ bool FallbackDesktopCapturerWrapper::SelectSourceInternal(SourceId id) {
 
   return secondary_capturer_->SelectSource(id);
 }
+
+//+by xxlang@2021-11-18 {
+DesktopRect FallbackDesktopCapturerWrapper::GetSelectedScreenRect() {
+  if (main_capturer_permanent_error_) {
+    RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper secondary GetSelectedScreenRect";
+    return secondary_capturer_->GetSelectedScreenRect();
+  } else {
+    RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper main GetSelectedScreenRect";
+    return main_capturer_->GetSelectedScreenRect();
+  }
+}
+
+void FallbackDesktopCapturerWrapper::EnableBorder(bool enable_border) {
+  enable_border_ = enable_border;
+  RTC_LOG(LS_INFO) << "FallbackDesktopCapturerWrapper " << (enable_border_ ? "with" : "without") << " border";
+}
+//+by xxlang@2021-11-18 }
 
 bool FallbackDesktopCapturerWrapper::FocusOnSelectedSource() {
   if (main_capturer_permanent_error_) {

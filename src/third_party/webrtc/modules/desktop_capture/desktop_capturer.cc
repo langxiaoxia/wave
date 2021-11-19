@@ -48,6 +48,8 @@ DesktopRect DesktopCapturer::GetSelectedScreenRect() {
 }
 //+by xxlang@2021-11-08 }
 
+void DesktopCapturer::EnableBorder(bool) {} //+by xxlang@2021-11-18
+
 bool DesktopCapturer::FocusOnSelectedSource() {
   return false;
 }

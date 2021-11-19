@@ -34,8 +34,7 @@ class FallbackDesktopCapturerWrapper final : public DesktopCapturer,
  public:
   FallbackDesktopCapturerWrapper(
       std::unique_ptr<DesktopCapturer> main_capturer,
-      std::unique_ptr<DesktopCapturer> secondary_capturer,
-      bool enable_border); //+by xxlang@2021-11-08
+      std::unique_ptr<DesktopCapturer> secondary_capturer);
   ~FallbackDesktopCapturerWrapper() override;
 
   // DesktopCapturer interface.
@@ -46,6 +45,8 @@ class FallbackDesktopCapturerWrapper final : public DesktopCapturer,
   void SetExcludedWindow(WindowId window) override;
   bool GetSourceList(SourceList* sources) override;
   bool SelectSource(SourceId id) override;
+  DesktopRect GetSelectedScreenRect() override; //+by xxlang@2021-11-18
+  void EnableBorder(bool) override; //+by xxlang@2021-11-18
   bool FocusOnSelectedSource() override;
   bool IsOccluded(const DesktopVector& pos) override;
 

@@ -19,6 +19,7 @@
 #include "modules/desktop_capture/win/screen_capturer_win_directx.h"
 #include "modules/desktop_capture/win/screen_capturer_win_gdi.h"
 #include "modules/desktop_capture/win/screen_capturer_win_magnifier.h"
+#include "rtc_base/logging.h"
 
 namespace webrtc {
 
@@ -38,25 +39,34 @@ std::unique_ptr<DesktopCapturer> DesktopCapturer::CreateRawScreenCapturer(
     const DesktopCaptureOptions& options) {
   std::unique_ptr<DesktopCapturer> capturer(new ScreenCapturerWinGdi(options));
   if (options.allow_directx_capturer()) {
+    RTC_LOG(LS_INFO) << "directx_capturer is enabled";
     // |dxgi_duplicator_controller| should be alive in this scope to ensure it
     // won't unload DxgiDuplicatorController.
     auto dxgi_duplicator_controller = DxgiDuplicatorController::Instance();
     if (ScreenCapturerWinDirectx::IsSupported()) {
+      RTC_LOG(LS_INFO) << "directx_capturer is supported";
       capturer.reset(new FallbackDesktopCapturerWrapper(
-          CreateScreenCapturerWinDirectx(), std::move(capturer), options.enable_border()));
+          CreateScreenCapturerWinDirectx(), std::move(capturer)));
+    } else {
+      RTC_LOG(LS_INFO) << "directx_capturer is unsupported";
     }
+  } else {
+    RTC_LOG(LS_INFO) << "directx_capturer is disabled";
   }
 
   if (options.allow_use_magnification_api()) {
+    RTC_LOG(LS_INFO) << "use_magnification_api is enabled";
     // ScreenCapturerWinMagnifier cannot work on Windows XP or earlier, as well
     // as 64-bit only Windows, and it may randomly crash on multi-screen
     // systems. So we may need to fallback to use original capturer.
     capturer.reset(new FallbackDesktopCapturerWrapper(
         std::unique_ptr<DesktopCapturer>(new ScreenCapturerWinMagnifier()),
-        std::move(capturer),
-        options.enable_border()));
+        std::move(capturer)));
+  } else {
+    RTC_LOG(LS_INFO) << "use_magnification_api is disabled";
   }
 
+  capturer->EnableBorder(options.enable_border());
   return capturer;
 }
 

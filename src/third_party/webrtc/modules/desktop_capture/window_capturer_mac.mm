@@ -223,7 +223,9 @@ void WindowCapturerMac::CaptureFrame() {
 
   std::unique_ptr<DesktopFrame> frame = DesktopFrameCGImage::CreateForWindow(on_screen_window);
   if (!frame) {
-    RTC_LOG(LS_WARNING) << "Temporarily failed to capture window.";
+    if (IsWindowOnScreen(on_screen_window)) {
+      RTC_LOG(LS_WARNING) << "Temporarily failed to capture window.";
+    }
     callback_->OnCaptureResult(Result::ERROR_TEMPORARY, nullptr);
     return;
   }

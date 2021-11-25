@@ -212,7 +212,9 @@ void ScreenCapturerMac::CaptureFrame() {
         RTC_LOG(LS_WARNING) << "ScreenCapturerMac create border for screen " << current_display_;
         window_border_->CreateForScreen(screen_pixel_bounds_);
       }
-    } else if (excluded_window_ == 0) {
+    }
+    if (window_border_->IsCreated() && excluded_window_ == 0) {
+      RTC_LOG(LS_WARNING) << "ScreenCapturerMac exclude border window";
       SetExcludedWindow(window_border_->GetBorderId());
     }
   }

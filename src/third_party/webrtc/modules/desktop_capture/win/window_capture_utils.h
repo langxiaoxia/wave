@@ -94,6 +94,10 @@ typedef HRESULT(WINAPI* DwmGetWindowAttributeFunc)(HWND hwnd,
                                                    DWORD flag,
                                                    PVOID result_ptr,
                                                    DWORD result_size);
+typedef HRESULT(WINAPI* DwmSetWindowAttributeFunc)(HWND hwnd,
+                                                   DWORD flag,
+                                                   LPCVOID attr_ptr,
+                                                   DWORD attr_size);
 class WindowCaptureHelperWin {
  public:
   WindowCaptureHelperWin();
@@ -110,11 +114,14 @@ class WindowCaptureHelperWin {
   bool IsWindowVisibleOnCurrentDesktop(HWND hwnd);
   bool IsWindowCloaked(HWND hwnd);
   bool EnumerateCapturableWindows(DesktopCapturer::SourceList* results);
+  bool GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect, DesktopRect* original_rect); //+by xxlang@2021-11-19
+  bool SetExcludedFromPeek(HWND hwnd, BOOL bFlag); //+by xxlang@2021-11-22
 
  private:
   HMODULE dwmapi_library_ = nullptr;
   DwmIsCompositionEnabledFunc func_ = nullptr;
   DwmGetWindowAttributeFunc dwm_get_window_attribute_func_ = nullptr;
+  DwmSetWindowAttributeFunc dwm_set_window_attribute_func_ = nullptr; //+by xxlang@2021-11-22
 
   // Only used on Win10+.
   Microsoft::WRL::ComPtr<IVirtualDesktopManager> virtual_desktop_manager_;

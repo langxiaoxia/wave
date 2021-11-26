@@ -4,10 +4,10 @@
 
 #include "modules/desktop_capture/window_border.h"
 #include "modules/desktop_capture/win/window_capture_utils.h"
-#include "rtc_base/constructor_magic.h"
-
-#include "rtc_base/logging.h"
 #include "rtc_base/win32.h"
+#include "rtc_base/constructor_magic.h"
+#include "rtc_base/logging.h"
+#include "rtc_base/platform_thread_types.h"
 
 #define USE_GDIPLUS
 
@@ -26,7 +26,7 @@ namespace {
 
 class WindowBorderWin : public WindowBorder {
  public:
-  explicit WindowBorderWin() = default;
+  explicit WindowBorderWin();
   ~WindowBorderWin() override;
 
   bool CreateForWindow(DesktopCapturer::SourceId source_id) override;
@@ -36,6 +36,7 @@ class WindowBorderWin : public WindowBorder {
   WindowId GetBorderId() override;
 
   HWND GetSourceWindow();
+  bool GetFrameRect(HWND hwnd, DesktopRect *frame_rect, DesktopRect* original_rect);
 
  private:
   bool Create(const DesktopRect &window_rect, HWND hwnd);
@@ -47,6 +48,7 @@ class WindowBorderWin : public WindowBorder {
   ATOM window_class_ = 0;
   HWND border_hwnd_ = nullptr;
   HWND source_hwnd_ = nullptr;
+  WindowCaptureHelperWin window_capture_helper_;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(WindowBorderWin);
 };
@@ -75,9 +77,9 @@ void UpdateBorderWindow(HWND border_hwnd, const DesktopRect &window_rect) {
   POINT ptSrc = {0, 0};
 
 #ifdef USE_GDIPLUS
-  RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) border_hwnd=" << border_hwnd << " window_rect=(" 
-    << window_rect.left() << ", " << window_rect.top() << ")-(" << window_rect.right() << ", " << window_rect.bottom() << ")" 
-    << ", " << window_rect.width() << "x" << window_rect.height();
+//  RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) border_hwnd=" << border_hwnd << " window_rect=(" 
+//    << window_rect.left() << ", " << window_rect.top() << ")-(" << window_rect.right() << ", " << window_rect.bottom() << ")" 
+//    << ", " << window_rect.width() << "x" << window_rect.height();
 
   // create bitmap
   Gdiplus::Bitmap bitmap(sizeDst.cx, sizeDst.cy, PixelFormat32bppARGB);
@@ -87,7 +89,7 @@ void UpdateBorderWindow(HWND border_hwnd, const DesktopRect &window_rect) {
   Gdiplus::Pen pen(Gdiplus::Color(255, WindowBorder::kBorderColorR, WindowBorder::kBorderColorG, WindowBorder::kBorderColorB));
   pen.SetWidth((Gdiplus::REAL)WindowBorder::kBorderWidth);
   pen.SetAlignment(Gdiplus::PenAlignment::PenAlignmentInset);
-  RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) PageUnit=" << graphics.GetPageUnit() << ", PageScale=" << graphics.GetPageScale() << ", Alignment=" << pen.GetAlignment();
+//  RTC_LOG(LS_INFO) << "UpdateBorderWindow(gdi+) PageUnit=" << graphics.GetPageUnit() << ", PageScale=" << graphics.GetPageScale() << ", Alignment=" << pen.GetAlignment();
   graphics.DrawRectangle(&pen, 0, 0, sizeDst.cx, sizeDst.cy);
 
   // select bitmap to dc
@@ -256,12 +258,12 @@ void FlagString(UINT uFlags, char *sFlags) {
 LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_MOVE:
-      RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", x=" << LOWORD(lParam) << ", y=" << HIWORD(lParam);
       break;
 
     case WM_SIZE:
-      RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", type=" << wParam << ", width=" << LOWORD(lParam) << ", height=" << HIWORD(lParam);
       break;
 
@@ -282,9 +284,9 @@ LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
     default:
       if (msg != WM_NULL && msg != WM_GETTEXT && msg != WM_GETTEXTLENGTH) {
         if (strlen(MsgString(msg)) > 0) {
-          RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd <<  ", msg=" << MsgString(msg);
+          RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): Thread=" << rtc::CurrentThreadId() << ", hwnd=" << hwnd <<  ", msg=" << MsgString(msg);
         } else {
-          RTC_LOG(LS_INFO) << "BorderWindowProc hwnd=" << hwnd <<  ", msg=" << msg;
+          RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd <<  ", msg=" << msg;
         }
       }
       break;
@@ -302,11 +304,11 @@ void SetWindowBefore(HWND hTarget, HWND hSource) {
   }
 
   if (hInsertAfter != hTarget) {
-    UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE;
+    UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW;
     char sFlags[256];
     FlagString(uFlags, sFlags);
     if (!::SetWindowPos(hTarget, hInsertAfter, 0, 0, 0, 0, uFlags)) {
-      return SetWindowBefore(hTarget, hInsertAfter);
+      return SetWindowBefore(hTarget, hInsertAfter); // find next valid window
     }
   }
 }
@@ -323,67 +325,90 @@ VOID CALLBACK UpdateScreenTimerProc(HWND border_hwnd, UINT message, UINT idTimer
 VOID CALLBACK UpdateWindowTimerProc(HWND border_hwnd, UINT message, UINT idTimer, DWORD dwTime) {
   WindowBorderWin *pThis = (WindowBorderWin *)::GetWindowLongPtr(border_hwnd, GWLP_USERDATA);
   if (NULL == pThis) {
-    RTC_LOG(LS_ERROR) << "GWLP_USERDATA is NULL";
+    RTC_LOG(LS_ERROR) << "Timer Proc: GWLP_USERDATA is NULL";
     return;
   }
 
   HWND source_hwnd = pThis->GetSourceWindow();
   if (NULL == source_hwnd) {
-    RTC_LOG(LS_ERROR) << "source_hwnd is NULL";
+    RTC_LOG(LS_ERROR) << "Timer Proc: source_hwnd is NULL";
     return;
   }
 
-  if (!::IsWindow(source_hwnd)) {
-    RTC_LOG(LS_ERROR) << "source_hwnd is invalid";
+  if (!IsWindowValidAndVisible(source_hwnd)) {
+    if (::IsWindowVisible(border_hwnd)) {
+      UINT uFlags = SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_HIDEWINDOW;
+      char sFlags[256];
+      FlagString(uFlags, sFlags);
+      if (!::SetWindowPos(border_hwnd, NULL, 0, 0, 0, 0, uFlags)) {
+        RTC_LOG(LS_ERROR) << "SetWindowPos Failed: error=" << GetLastError() << ", flags=" << sFlags;
+      } else {
+        RTC_LOG(LS_INFO) << "Timer Proc(" << pThis << "): Thread=" << rtc::CurrentThreadId() << ": border show => hide";
+      }
+    }
     return;
+  }
+
+  if (!::IsWindowVisible(border_hwnd)) {
+    RTC_LOG(LS_INFO) << "Timer Proc(" << pThis << "): Thread=" << rtc::CurrentThreadId() << ": border hide => show";
   }
 
   SetWindowBefore(border_hwnd, source_hwnd);
 
-  DesktopRect window_rect, cropped_rect;
-  if (!GetWindowRect(border_hwnd, &window_rect)) {
+  DesktopRect border_rect;
+  if (!GetWindowRect(border_hwnd, &border_rect)) {
     RTC_LOG(LS_ERROR) << "GetWindowRect Failed: error=" << GetLastError();
+    return;
   }
-  if (!GetCroppedWindowRect(source_hwnd, true, &cropped_rect, nullptr)) {
-    RTC_LOG(LS_ERROR) << "GetCroppedWindowRect Failed: error=" << GetLastError();
+
+  DesktopRect source_rect;
+  if (!pThis->GetFrameRect(source_hwnd, &source_rect, nullptr)) {
+    return;
   }
-  if (!window_rect.equals(cropped_rect)) { // move or resize
-    UpdateBorderWindow(border_hwnd, cropped_rect);
+
+  if (!border_rect.equals(source_rect)) { // move or resize
+    UpdateBorderWindow(border_hwnd, source_rect);
   }
+}
+
+WindowBorderWin::WindowBorderWin() {
+#ifdef USE_GDIPLUS
+  // Initialize GDI+.
+  Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+  Gdiplus::GdiplusStartup(&gdiplusToken_, &gdiplusStartupInput, NULL);
+#endif // USE_GDIPLUS
 }
 
 WindowBorderWin::~WindowBorderWin() {
   Destroy();
+
+#ifdef USE_GDIPLUS
+  Gdiplus::GdiplusShutdown(gdiplusToken_);
+#endif // USE_GDIPLUS
 }
 
 bool WindowBorderWin::CreateForWindow(DesktopCapturer::SourceId source_id) {
-  HWND hwnd = reinterpret_cast<HWND>(source_id);
-  const int frame_width = GetSystemMetrics(SM_CXSIZEFRAME);
-  const int frame_height = GetSystemMetrics(SM_CYSIZEFRAME);
-  const int border_width = GetSystemMetrics(SM_CXBORDER);
-  const int border_height = GetSystemMetrics(SM_CYBORDER);
-  RTC_LOG(LS_INFO) << "SM_CXSIZEFRAME=" << frame_width << ", SM_CYSIZEFRAME=" << frame_height
-                   << ", SM_CXBORDER=" << border_width << ", SM_CYBORDER=" << border_height;
-  DesktopRect cropped_rect, original_rect;
-  if (!GetCroppedWindowRect(hwnd, true, &cropped_rect, &original_rect)) {
-    RTC_LOG(LS_ERROR) << "GetCroppedWindowRect Failed: error=" << GetLastError();
+  HWND source_hwnd = reinterpret_cast<HWND>(source_id);
+  DesktopRect frame_rect, original_rect;
+  if (!GetFrameRect(source_hwnd, &frame_rect, &original_rect)) {
     return false;
   }
-  RTC_LOG(LS_WARNING) << "cropped_rect : " << cropped_rect.left()
-                      << ", " << cropped_rect.top()
-                      << ", " << cropped_rect.right()
-                      << ", " << cropped_rect.bottom();
-  RTC_LOG(LS_WARNING) << "original_rect : " << original_rect.left()
+
+  RTC_LOG(LS_INFO) << "frame_rect: " << frame_rect.left()
+                      << ", " << frame_rect.top()
+                      << ", " << frame_rect.right()
+                      << ", " << frame_rect.bottom();
+  RTC_LOG(LS_INFO) << "original_rect: " << original_rect.left()
                       << ", " << original_rect.top()
                       << ", " << original_rect.right()
                       << ", " << original_rect.bottom();
 
-  if (!Create(cropped_rect, hwnd)) {
+  if (!Create(frame_rect, source_hwnd)) {
     return false;
   }
 
   ::SetTimer(border_hwnd_, ID_UPDATE_TIMER, kUpdateWindowInterval, (TIMERPROC)UpdateWindowTimerProc);
-  RTC_LOG(LS_WARNING) << "Timer On : source_hwnd=" << source_hwnd_ << ", border_hwnd=" << border_hwnd_ << ", Elapse=" << kUpdateWindowInterval;
+  RTC_LOG(LS_WARNING) << "Timer On: source_hwnd=" << source_hwnd_ << ", border_hwnd=" << border_hwnd_ << ", Elapse=" << kUpdateWindowInterval;
   return true;
 }
 
@@ -393,7 +418,7 @@ bool WindowBorderWin::CreateForScreen(const DesktopRect &window_rect) {
   }
 
   ::SetTimer(border_hwnd_, ID_UPDATE_TIMER, kUpdateScreenInterval, (TIMERPROC)UpdateScreenTimerProc);
-  RTC_LOG(LS_WARNING) << "Timer On : source_hwnd=" << source_hwnd_ << ", border_hwnd=" << border_hwnd_ << ", Elapse=" << kUpdateScreenInterval;
+  RTC_LOG(LS_WARNING) << "Timer On: source_hwnd=" << source_hwnd_ << ", border_hwnd=" << border_hwnd_ << ", Elapse=" << kUpdateScreenInterval;
   return true;
 }
 
@@ -407,10 +432,8 @@ bool WindowBorderWin::IsCreated() {
 
 void WindowBorderWin::Destroy() {
   if (nullptr != border_hwnd_) {
+    RTC_LOG(LS_INFO) << "Destroy(" << this << "): Thread=" << rtc::CurrentThreadId() << ": border_hwnd=" << border_hwnd_;
     ::KillTimer(border_hwnd_, ID_UPDATE_TIMER);
-    RTC_LOG(LS_WARNING) << "Timer Off";
-
-    RTC_LOG(LS_WARNING) << "DestroyWindow border_hwnd=" << border_hwnd_;
     ::DestroyWindow(border_hwnd_);
     border_hwnd_ = nullptr;
   }
@@ -422,10 +445,6 @@ void WindowBorderWin::Destroy() {
   }
 
   source_hwnd_ = nullptr;
-
-#ifdef USE_GDIPLUS
-  Gdiplus::GdiplusShutdown(gdiplusToken_);
-#endif // USE_GDIPLUS
 }
 
 WindowId WindowBorderWin::GetBorderId() {
@@ -436,24 +455,43 @@ HWND WindowBorderWin::GetSourceWindow() {
   return source_hwnd_;
 }
 
+bool WindowBorderWin::GetFrameRect(HWND hwnd, DesktopRect* frame_rect, DesktopRect* original_rect) {
+  if (!GetCroppedWindowRect(hwnd, true, frame_rect, nullptr)) {
+    RTC_LOG(LS_ERROR) << "GetCroppedWindowRect Failed: error=" << GetLastError();
+    return false;
+  }
+
+  DesktopRect dwm_rect;
+  if (!window_capture_helper_.GetExtendedFrameBounds(hwnd, &dwm_rect, original_rect)) {
+    return true;
+  }
+
+  if (frame_rect->equals(dwm_rect)) {
+    return true;
+  }
+
+  if (original_rect) {
+    RTC_LOG(LS_INFO) << "cropped_rect: " << frame_rect->left()
+                        << ", " << frame_rect->top()
+                        << ", " << frame_rect->right()
+                        << ", " << frame_rect->bottom();
+  }
+  *frame_rect = dwm_rect;
+  return true;
+}
+
 bool WindowBorderWin::Create(const DesktopRect &window_rect, HWND source_hwnd) {
   // check created
   if (IsCreated()) {
-    RTC_LOG(LS_ERROR) << "Create failed : already created";
+    RTC_LOG(LS_ERROR) << "Create failed: already created";
     return false;
   }
 
   // check parameter
   if (window_rect.is_empty()) {
-    RTC_LOG(LS_ERROR) << "Create failed : empty rect";
+    RTC_LOG(LS_ERROR) << "Create failed: empty rect";
     return false;
   }
-
-#ifdef USE_GDIPLUS
-  // Initialize GDI+.
-  Gdiplus::GdiplusStartupInput gdiplusStartupInput;
-  Gdiplus::GdiplusStartup(&gdiplusToken_, &gdiplusStartupInput, NULL);
-#endif // USE_GDIPLUS
 
   // save source hwnd
   source_hwnd_ = source_hwnd;
@@ -487,8 +525,12 @@ bool WindowBorderWin::Create(const DesktopRect &window_rect, HWND source_hwnd) {
     return false;
   }
 
-  RTC_LOG(LS_WARNING) << "CreateWindowEx OK: border_hwnd=" << border_hwnd_ << " (" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height();
+  RTC_LOG(LS_INFO) << "Create(" << this << "): Thread=" << rtc::CurrentThreadId() << ": border_hwnd=" << border_hwnd_ << 
+                      " (" << window_rect.left() << ", " << window_rect.top() << ") " << window_rect.width() << "x" << window_rect.height();
   ::ShowWindow(border_hwnd_, SW_SHOWNA);
+
+  window_capture_helper_.SetExcludedFromPeek(border_hwnd_, TRUE);
+
   UpdateBorderWindow(border_hwnd_, window_rect);
 
   ::SetWindowLongPtr(border_hwnd_, GWLP_USERDATA, (LONG_PTR)this);
@@ -496,7 +538,6 @@ bool WindowBorderWin::Create(const DesktopRect &window_rect, HWND source_hwnd) {
 }
 
 }  // namespace
-
 
 // static
 std::unique_ptr<WindowBorder> DesktopCapturer::CreateWindowBorder() {

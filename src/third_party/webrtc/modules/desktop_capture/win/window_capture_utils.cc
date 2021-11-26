@@ -163,33 +163,19 @@ bool GetCroppedWindowRect(HWND window,
     // Only apply this cropping to windows with a resize border (otherwise,
     // it'd clip the edges of captured pop-up windows without this border).
     LONG style = GetWindowLong(window, GWL_STYLE);
-    if ((style & WS_THICKFRAME || style & DS_MODALFRAME) && style & WS_BORDER) { //*by xxlang@2021-10-12
-      UINT dpi = 96;
-      typedef UINT(WINAPI * GetDpiForWindowFunc)(HWND);
-      GetDpiForWindowFunc get_dpi_for_window = reinterpret_cast<GetDpiForWindowFunc>(GetProcAddress(GetModuleHandleW(L"user32.dll"), "GetDpiForWindow"));
-      if (get_dpi_for_window) {
-        dpi = (*get_dpi_for_window)(window);
-        if (0 == dpi) {
-          dpi = 96;
-        }
-      }
-      int width = GetSystemMetrics(SM_CXSIZEFRAME) * dpi / 96;
-      int bottom_height = GetSystemMetrics(SM_CYSIZEFRAME) * dpi / 96;
-      const int visible_border_height = GetSystemMetrics(SM_CYBORDER) * dpi / 96;
+    if (style & WS_THICKFRAME || style & DS_MODALFRAME) {
+      int width = GetSystemMetrics(SM_CXSIZEFRAME);
+      int bottom_height = GetSystemMetrics(SM_CYSIZEFRAME);
+      const int visible_border_height = GetSystemMetrics(SM_CYBORDER);
       int top_height = visible_border_height;
-      //+by xxlang@2021-10-08 {
-      if (is_maximized) {
-        top_height = bottom_height;
-      }
-      //+by xxlang@2021-10-08 }
 
       // If requested, avoid cropping the visible window border. This is used
       // for pop-up windows to include their border, but not for the outermost
       // window (where a partially-transparent border may expose the
       // background a bit).
-      if (avoid_cropping_border  && !is_maximized) { //*by xxlang@2021-10-08
-        width = std::max(0, int((GetSystemMetrics(SM_CXSIZEFRAME) - GetSystemMetrics(SM_CXBORDER)) * dpi / 96));
-        bottom_height = std::max(0, int((GetSystemMetrics(SM_CYSIZEFRAME) - GetSystemMetrics(SM_CYBORDER)) * dpi / 96));
+      if (avoid_cropping_border) {
+        width = std::max(0, width - GetSystemMetrics(SM_CXBORDER));
+        bottom_height = std::max(0, bottom_height - visible_border_height);
         top_height = 0;
       }
       cropped_rect->Extend(-width, -top_height, -width, -bottom_height);
@@ -301,6 +287,9 @@ WindowCaptureHelperWin::WindowCaptureHelperWin() {
     dwm_get_window_attribute_func_ =
         reinterpret_cast<DwmGetWindowAttributeFunc>(
             GetProcAddress(dwmapi_library_, "DwmGetWindowAttribute"));
+    dwm_set_window_attribute_func_ =
+        reinterpret_cast<DwmSetWindowAttributeFunc>(
+            GetProcAddress(dwmapi_library_, "DwmSetWindowAttribute"));
   }
 
   if (rtc::IsWindows10OrLater()) {
@@ -532,5 +521,48 @@ bool WindowCaptureHelperWin::EnumerateCapturableWindows(
 
   return true;
 }
+
+//+by xxlang@2021-11-19 {
+bool WindowCaptureHelperWin::GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect, DesktopRect* original_rect) {
+  DesktopRect window_rect;
+  if (!GetWindowRect(hwnd, &window_rect)) {
+    return false;
+  }
+
+  if (original_rect) {
+    *original_rect = window_rect;
+  }
+
+  if (!dwm_get_window_attribute_func_) {
+    return false;
+  }
+
+  RECT rect;
+  int ret = dwm_get_window_attribute_func_(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof(rect));
+  if (S_OK != ret) {
+  	if (original_rect) {
+      RTC_LOG(LS_ERROR) << "DwmGetWindowAttribute failed : error=" << ret;
+    }
+    return false;
+  }
+
+  *dwm_rect = DesktopRect::MakeLTRB(rect.left, rect.top, rect.right, rect.bottom);
+  return true;
+}
+
+bool WindowCaptureHelperWin::SetExcludedFromPeek(HWND hwnd, BOOL bFlag) {
+  if (!dwm_set_window_attribute_func_) {
+    return false;
+  }
+
+  int ret = dwm_set_window_attribute_func_(hwnd, DWMWA_EXCLUDED_FROM_PEEK, &bFlag, sizeof(bFlag));
+  if (S_OK != ret) {
+    RTC_LOG(LS_ERROR) << "DwmSetWindowAttribute failed : error=" << ret;
+    return false;
+  }
+
+  return true;
+}
+//+by xxlang@2021-11-19 }
 
 }  // namespace webrtc

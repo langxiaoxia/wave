@@ -158,7 +158,7 @@ ScreenCapturerMac::ScreenCapturerMac(
       window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-10-18
 {
   RTC_LOG(LS_INFO) << "Allow IOSurface: " << allow_iosurface;
-  RTC_LOG(LS_WARNING) << "ScreenCapturerMac " << (enable_border_ ? "with" : "without") << " border";
+  RTC_LOG(LS_INFO) << "ScreenCapturerMac " << (enable_border_ ? "with" : "without") << " border";
   thread_checker_.Detach();
 }
 
@@ -203,23 +203,6 @@ void ScreenCapturerMac::CaptureFrame() {
   TRACE_EVENT0("webrtc", "creenCapturerMac::CaptureFrame");
   int64_t capture_start_time_nanos = rtc::TimeNanos();
 
-  //+by xxlang@2021-10-18 {
-  if (enable_border_) {
-    if (!window_border_->IsCreated()) {
-      if (first_capture_) {
-        first_capture_ = false;
-      } else {
-        RTC_LOG(LS_WARNING) << "ScreenCapturerMac create border for screen " << current_display_;
-        window_border_->CreateForScreen(screen_pixel_bounds_);
-      }
-    }
-    if (window_border_->IsCreated() && excluded_window_ == 0) {
-      RTC_LOG(LS_WARNING) << "ScreenCapturerMac exclude border window";
-      SetExcludedWindow(window_border_->GetBorderId());
-    }
-  }
-  //+by xxlang@2021-10-18 }
-
   queue_.MoveToNextFrame();
   RTC_DCHECK(!queue_.current_frame() || !queue_.current_frame()->IsShared());
 
@@ -237,6 +220,24 @@ void ScreenCapturerMac::CaptureFrame() {
     }
     ScreenConfigurationChanged();
   }
+
+  //+by xxlang@2021-10-18 {
+  if (enable_border_) {
+    if (!window_border_->IsCreated()) {
+      if (first_capture_) {
+        first_capture_ = false;
+      } else {
+        RTC_LOG(LS_INFO) << "ScreenCapturerMac create border for screen " << current_display_ << ", dip=" << dip_to_pixel_scale_ <<
+                                ", bounds(" << screen_bounds_.left() << ", " << screen_bounds_.top() << ") " << screen_bounds_.width() << "x" << screen_bounds_.height();
+        window_border_->CreateForScreen(screen_bounds_);
+      }
+    }
+    if (window_border_->IsCreated() && excluded_window_ == 0) {
+      RTC_LOG(LS_INFO) << "ScreenCapturerMac exclude border window";
+      SetExcludedWindow(window_border_->GetBorderId());
+    }
+  }
+  //+by xxlang@2021-10-18 }
 
   // When screen is zoomed in/out, OSX only updates the part of Rects currently
   // displayed on screen, with relative location to current top-left on screen.
@@ -287,7 +288,7 @@ void ScreenCapturerMac::CaptureFrame() {
 }
 
 void ScreenCapturerMac::SetExcludedWindow(WindowId window) {
-  RTC_LOG(LS_WARNING) << "ScreenCapturerMac::SetExcludedWindow " << excluded_window_ << " => " << window;
+  RTC_LOG(LS_INFO) << "ScreenCapturerMac::SetExcludedWindow " << excluded_window_ << " => " << window;
   excluded_window_ = window;
 }
 
@@ -304,28 +305,13 @@ bool ScreenCapturerMac::GetSourceList(SourceList* screens) {
 
 bool ScreenCapturerMac::SelectSource(SourceId id) {
   if (id == kFullDesktopScreenId) {
-    //+by xxlang@2021-10-18 {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerMac::SelectSource " << current_display_ << " => " << 0;
-    if (current_display_ != 0) {
-      window_border_->Destroy();
-      first_capture_ = true;
-    }
-    //+by xxlang@2021-10-18 }
-
+    RTC_LOG(LS_INFO) << "ScreenCapturerMac::SelectSource " << current_display_ << " => " << 0;
     current_display_ = 0;
   } else {
     const MacDisplayConfiguration* config =
         desktop_config_.FindDisplayConfigurationById(static_cast<CGDirectDisplayID>(id));
     if (!config) return false;
-
-    //+by xxlang@2021-10-18 {
-    RTC_LOG(LS_WARNING) << "ScreenCapturerMac::SelectSource " << current_display_ << " => " << config->id;
-    if (current_display_ != config->id) {
-      window_border_->Destroy();
-      first_capture_ = true;
-    }
-    //+by xxlang@2021-10-18 }
-
+    RTC_LOG(LS_INFO) << "ScreenCapturerMac::SelectSource " << current_display_ << " => " << config->id;
     current_display_ = config->id;
   }
 
@@ -454,12 +440,19 @@ bool ScreenCapturerMac::CgBlit(const DesktopFrame& frame, const DesktopRegion& r
 }
 
 void ScreenCapturerMac::ScreenConfigurationChanged() {
+  //+by xxlang@2021-10-18 {
+  window_border_->Destroy();
+  first_capture_ = true;
+  //+by xxlang@2021-10-18 }
+
   if (current_display_) {
     const MacDisplayConfiguration* config =
         desktop_config_.FindDisplayConfigurationById(current_display_);
+    screen_bounds_ = config ? config->bounds : DesktopRect(); //+by xxlang@2021-11-29
     screen_pixel_bounds_ = config ? config->pixel_bounds : DesktopRect();
     dip_to_pixel_scale_ = config ? config->dip_to_pixel_scale : 1.0f;
   } else {
+    screen_bounds_ = desktop_config_.bounds; //+by xxlang@2021-11-29
     screen_pixel_bounds_ = desktop_config_.pixel_bounds;
     dip_to_pixel_scale_ = desktop_config_.dip_to_pixel_scale;
   }

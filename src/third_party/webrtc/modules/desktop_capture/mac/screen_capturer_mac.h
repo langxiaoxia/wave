@@ -87,6 +87,9 @@ class ScreenCapturerMac final : public DesktopCapturer {
   // 10.6 and before, this is always 0.
   CGDirectDisplayID current_display_ = 0;
 
+  // The Density-Independent Pixels (DIPs) bounds of the current screen.
+  DesktopRect screen_bounds_; //+by xxlang@2021-11-29
+
   // The physical pixel bounds of the current screen.
   DesktopRect screen_pixel_bounds_;
 

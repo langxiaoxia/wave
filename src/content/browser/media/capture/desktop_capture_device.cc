@@ -533,7 +533,9 @@ std::unique_ptr<media::VideoCaptureDevice> DesktopCaptureDevice::Create(
               DesktopCapturerLacros::CaptureType::kScreen,
               webrtc::DesktopCaptureOptions());
 #else
+#if defined(OS_MAC)
       options.set_enable_border(true); //+by xxlang@2021-09-28
+#endif
       std::unique_ptr<webrtc::DesktopCapturer> screen_capturer(
           webrtc::DesktopCapturer::CreateScreenCapturer(options));
 #endif

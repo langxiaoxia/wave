@@ -45,6 +45,9 @@ async function startScreen() {
 }
 
 async function selectSource(source) {
+  // Stop old Stream
+  stopScreen();
+
   const constraints = {
     audio: false,
     video: {
@@ -67,7 +70,8 @@ async function selectSource(source) {
 async function stopScreen() {
   const videoElement = document.getElementById('screenVideo');
   let tracks = videoElement.srcObject.getTracks();
-
-  tracks.forEach(track => track.stop());
+  if (tracks) {
+    tracks.forEach(track => track.stop());
+  }
   videoElement.srcObject = null;
 }

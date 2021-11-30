@@ -89,6 +89,8 @@ enum GetWindowListFlags {
 // Returns false if native APIs failed.
 bool GetWindowList(int flags, DesktopCapturer::SourceList* windows);
 
+bool SetExcludedFromDDA(HWND window, BOOL bFlag); //+by xxlang@2021-11-30
+
 typedef HRESULT(WINAPI* DwmIsCompositionEnabledFunc)(BOOL* enabled);
 typedef HRESULT(WINAPI* DwmGetWindowAttributeFunc)(HWND hwnd,
                                                    DWORD flag,

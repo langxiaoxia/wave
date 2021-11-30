@@ -62,7 +62,6 @@ bool BlankDetectorDesktopCapturerWrapper::SelectSource(SourceId id) {
 
 //+by xxlang@2021-11-08 {
 DesktopRect BlankDetectorDesktopCapturerWrapper::GetSelectedScreenRect() {
-  RTC_LOG(LS_INFO) << "BlankDetectorDesktopCapturerWrapper GetSelectedScreenRect";
   return capturer_->GetSelectedScreenRect();
 }
 //+by xxlang@2021-11-08 }

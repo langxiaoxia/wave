@@ -74,6 +74,7 @@ class WindowBorderMac : public WindowBorder {
   bool IsCreated() override;
   void Destroy() override;
   WindowId GetBorderId() override;
+  void OnScreenRectChanged(const DesktopRect &screen_rect) override;
 
  private:
   bool Create(const DesktopRect &window_rect, CGWindowID source_id);
@@ -140,6 +141,25 @@ WindowId WindowBorderMac::GetBorderId() {
   } else {
     return 0;
   }
+}
+
+void WindowBorderMac::OnScreenRectChanged(const DesktopRect &screen_rect) {
+  if (!IsCreated()) {
+    return;
+  }
+
+  dispatch_semaphore_t border_changed = dispatch_semaphore_create(0);
+  dispatch_async(dispatch_get_main_queue(), ^(void) {
+    NSRect border_nsrect =  [border_window_ frame];
+    gfx::Rect screen_gfxrect(screen_rect.left(), screen_rect.top(), screen_rect.width(), screen_rect.height());
+    NSRect screen_nsrect = gfx::ScreenRectToNSRect(screen_gfxrect);
+    if (!NSEqualRects(screen_nsrect, border_nsrect)) {
+      [border_window_ setFrame:screen_nsrect display:YES];
+    }
+    dispatch_semaphore_signal(border_changed);
+  });
+  dispatch_semaphore_wait(border_changed, DISPATCH_TIME_FOREVER);
+  border_changed = nil; // ARC
 }
 
 bool WindowBorderMac::Create(const DesktopRect &window_rect, CGWindowID source_id) {
@@ -264,14 +284,12 @@ void WindowBorderMac::SetTimer() {
 //      RTC_LOG(LS_INFO) << "Timer Event Handler(" << pThis << "): border order " << border_order_old << " => " << border_order_new;
     }
     
-    NSRect border_rect =  [border_window_ frame];
-    DesktopRect window_rect = GetWindowBounds(source_id_);
-    gfx::Rect screen_rect(window_rect.left(), window_rect.top(), window_rect.width(), window_rect.height());
-    NSRect source_rect = gfx::ScreenRectToNSRect(screen_rect);
-    if (!NSEqualRects(source_rect, border_rect)) {
-//      RTC_LOG(LS_INFO) << "border_rect=(" << border_rect.origin.x << ", " << border_rect.origin.y << ") " << border_rect.size.width << "x" << border_rect.size.height <<
-//                          ", source_rect=(" << source_rect.origin.x << ", " << source_rect.origin.y << ") " << source_rect.size.width << "x" << source_rect.size.height;
-      [border_window_ setFrame:source_rect display:YES];
+    NSRect border_nsrect =  [border_window_ frame];
+    DesktopRect source_rect = GetWindowBounds(source_id_);
+    gfx::Rect source_gfxrect(source_rect.left(), source_rect.top(), source_rect.width(), source_rect.height());
+    NSRect source_nsrect = gfx::ScreenRectToNSRect(source_gfxrect);
+    if (!NSEqualRects(source_nsrect, border_nsrect)) {
+      [border_window_ setFrame:source_nsrect display:YES];
     }
   });
 

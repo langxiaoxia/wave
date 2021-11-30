@@ -34,6 +34,7 @@ class WindowBorderWin : public WindowBorder {
   bool IsCreated() override;
   void Destroy() override;
   WindowId GetBorderId() override;
+  void OnScreenRectChanged(const DesktopRect &screen_rect) override;
 
   HWND GetSourceWindow();
   bool GetFrameRect(HWND hwnd, DesktopRect *frame_rect, DesktopRect* original_rect);
@@ -451,6 +452,22 @@ WindowId WindowBorderWin::GetBorderId() {
   return reinterpret_cast<WindowId>(border_hwnd_);
 }
 
+void WindowBorderWin::OnScreenRectChanged(const DesktopRect &screen_rect) {
+  if (!IsCreated()) {
+    return;
+  }
+
+  DesktopRect border_rect;
+  if (!GetWindowRect(border_hwnd_, &border_rect)) {
+    RTC_LOG(LS_ERROR) << "GetWindowRect Failed: error=" << GetLastError();
+    return;
+  }
+
+  if (!border_rect.equals(screen_rect)) {
+    UpdateBorderWindow(border_hwnd_, screen_rect);
+  }
+}
+
 HWND WindowBorderWin::GetSourceWindow() {
   return source_hwnd_;
 }
@@ -530,6 +547,7 @@ bool WindowBorderWin::Create(const DesktopRect &window_rect, HWND source_hwnd) {
   ::ShowWindow(border_hwnd_, SW_SHOWNA);
 
   window_capture_helper_.SetExcludedFromPeek(border_hwnd_, TRUE);
+  SetExcludedFromDDA(border_hwnd_, TRUE);
 
   UpdateBorderWindow(border_hwnd_, window_rect);
 

@@ -223,7 +223,6 @@ bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
 
 //+by xxlang@2021-11-08 {
 DesktopRect ScreenCapturerWinDirectx::GetSelectedScreenRect() {
-  RTC_LOG(LS_INFO) << "ScreenCapturerWinDirectx GetSelectedScreenRect";
   return GetScreenRect(current_screen_id_, current_device_key_);
 }
 //+by xxlang@2021-11-08 }

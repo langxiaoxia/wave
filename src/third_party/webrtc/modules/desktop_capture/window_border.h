@@ -20,6 +20,7 @@ class WindowBorder {
   virtual bool IsCreated() = 0;
   virtual void Destroy() = 0;
   virtual WindowId GetBorderId() = 0;
+  virtual void OnScreenRectChanged(const DesktopRect &screen_rect) = 0;
 
   static const int kBorderWidth = 4;
   static const unsigned char kBorderColorR = 0xEB;

@@ -222,19 +222,17 @@ void ScreenCapturerMac::CaptureFrame() {
   }
 
   //+by xxlang@2021-10-18 {
-  if (enable_border_) {
-    if (!window_border_->IsCreated()) {
-      if (first_capture_) {
-        first_capture_ = false;
-      } else {
-        RTC_LOG(LS_INFO) << "ScreenCapturerMac create border for screen " << current_display_ << ", dip=" << dip_to_pixel_scale_ <<
-                                ", bounds(" << screen_bounds_.left() << ", " << screen_bounds_.top() << ") " << screen_bounds_.width() << "x" << screen_bounds_.height();
-        window_border_->CreateForScreen(screen_bounds_);
+  if (enable_border_ && !window_border_->IsCreated()) {
+    if (first_capture_) {
+      first_capture_ = false;
+    } else {
+      RTC_LOG(LS_INFO) << "ScreenCapturerMac create border for screen " << current_display_ << ", dip=" << dip_to_pixel_scale_ <<
+                              ", bounds(" << screen_bounds_.left() << ", " << screen_bounds_.top() << ") " << screen_bounds_.width() << "x" << screen_bounds_.height();
+      window_border_->CreateForScreen(screen_bounds_);
+      if (window_border_->IsCreated()) {
+        RTC_LOG(LS_INFO) << "ScreenCapturerMac exclude border window";
+        SetExcludedWindow(window_border_->GetBorderId());
       }
-    }
-    if (window_border_->IsCreated() && excluded_window_ == 0) {
-      RTC_LOG(LS_INFO) << "ScreenCapturerMac exclude border window";
-      SetExcludedWindow(window_border_->GetBorderId());
     }
   }
   //+by xxlang@2021-10-18 }
@@ -440,11 +438,6 @@ bool ScreenCapturerMac::CgBlit(const DesktopFrame& frame, const DesktopRegion& r
 }
 
 void ScreenCapturerMac::ScreenConfigurationChanged() {
-  //+by xxlang@2021-10-18 {
-  window_border_->Destroy();
-  first_capture_ = true;
-  //+by xxlang@2021-10-18 }
-
   if (current_display_) {
     const MacDisplayConfiguration* config =
         desktop_config_.FindDisplayConfigurationById(current_display_);
@@ -468,6 +461,8 @@ void ScreenCapturerMac::ScreenConfigurationChanged() {
 
   // Make sure the frame buffers will be reallocated.
   queue_.Reset();
+
+  window_border_->OnScreenRectChanged(screen_bounds_); //+by xxlang@2021-11-30
 }
 
 bool ScreenCapturerMac::RegisterRefreshAndMoveHandlers() {

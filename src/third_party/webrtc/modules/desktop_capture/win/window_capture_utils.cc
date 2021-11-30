@@ -277,6 +277,39 @@ bool GetWindowList(int flags, DesktopCapturer::SourceList* windows) {
                        reinterpret_cast<LPARAM>(&params)) != 0;
 }
 
+//+by xxlang@2021-11-30 {
+struct WINCOMPATTRDATA {
+  DWORD attribute;
+  PVOID pData;
+  ULONG dataSize;
+};
+
+typedef BOOL (WINAPI* SetWindowCompositionAttributeFunc)(HWND hwnd, WINCOMPATTRDATA* pAttrData);
+
+bool SetExcludedFromDDA(HWND window, BOOL bFlag) {
+  HMODULE user32 = LoadLibraryW(L"user32.dll");
+  if (user32 == NULL) {
+    return false;
+  }
+
+  SetWindowCompositionAttributeFunc set_window_composition_attribute_func = (SetWindowCompositionAttributeFunc)GetProcAddress(user32, "SetWindowCompositionAttribute");
+  if (set_window_composition_attribute_func == NULL) {
+    FreeLibrary(user32);
+    return false;
+  }
+
+  WINCOMPATTRDATA data = {24, &bFlag, sizeof(bFlag)}; // WCA_EXCLUDED_FROM_DDA
+  if (!set_window_composition_attribute_func(window, &data)) {
+    RTC_LOG(LS_ERROR) << "SetWindowCompositionAttribute failed : error=" << GetLastError();
+    FreeLibrary(user32);
+    return false;
+  }
+
+  FreeLibrary(user32);
+  return true;
+}
+//+by xxlang@2021-11-30 }
+
 // WindowCaptureHelperWin implementation.
 WindowCaptureHelperWin::WindowCaptureHelperWin() {
   // Try to load dwmapi.dll dynamically since it is not available on XP.

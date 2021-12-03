@@ -2,6 +2,9 @@ const { desktopCapturer, remote } = require('electron');
 const { Menu } = remote;
 
 async function startCamera() {
+  // Stop old Stream
+  stopCamera();
+
   const constraints = {
     audio: false,
     video: {
@@ -20,10 +23,13 @@ async function startCamera() {
 
 async function stopCamera() {
   const videoElement = document.getElementById('cameraVideo');
-  let tracks = videoElement.srcObject.getTracks();
-
-  tracks.forEach(track => track.stop());
-  videoElement.srcObject = null;
+  if (videoElement.srcObject) {
+    let tracks = videoElement.srcObject.getTracks();
+    if (tracks) {
+      tracks.forEach(track => track.stop());
+    }
+    videoElement.srcObject = null;
+  }
 }
 
 async function startScreen() {
@@ -39,7 +45,6 @@ async function startScreen() {
       };
     })
   );
-
 
   videoOptionsMenu.popup();
 }
@@ -69,9 +74,11 @@ async function selectSource(source) {
 
 async function stopScreen() {
   const videoElement = document.getElementById('screenVideo');
-  let tracks = videoElement.srcObject.getTracks();
-  if (tracks) {
-    tracks.forEach(track => track.stop());
+  if (videoElement.srcObject) {
+    let tracks = videoElement.srcObject.getTracks();
+    if (tracks) {
+      tracks.forEach(track => track.stop());
+    }
+    videoElement.srcObject = null;
   }
-  videoElement.srcObject = null;
 }

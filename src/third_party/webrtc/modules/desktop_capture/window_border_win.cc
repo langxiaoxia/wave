@@ -201,6 +201,13 @@ const char* MsgString(UINT msg) {
     case WM_WINDOWPOSCHANGED:
       return "WM_WINDOWPOSCHANGED";
 
+    case WM_SHOWWINDOW:
+      return "WM_SHOWWINDOW";
+    case WM_WININICHANGE:
+      return "WM_WININICHANGE";
+    case WM_DISPLAYCHANGE:
+      return "WM_DISPLAYCHANGE";
+
     default:
       return "";
   }
@@ -259,12 +266,12 @@ void FlagString(UINT uFlags, char *sFlags) {
 LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
   switch (msg) {
     case WM_MOVE:
-      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): Thread=" << rtc::CurrentThreadId() << ", hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", x=" << LOWORD(lParam) << ", y=" << HIWORD(lParam);
       break;
 
     case WM_SIZE:
-      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd << ", msg=" << MsgString(msg)
+      RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): Thread=" << rtc::CurrentThreadId() << ", hwnd=" << hwnd << ", msg=" << MsgString(msg)
                        << ", type=" << wParam << ", width=" << LOWORD(lParam) << ", height=" << HIWORD(lParam);
       break;
 
@@ -287,7 +294,7 @@ LRESULT CALLBACK BorderWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPa
         if (strlen(MsgString(msg)) > 0) {
           RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): Thread=" << rtc::CurrentThreadId() << ", hwnd=" << hwnd <<  ", msg=" << MsgString(msg);
         } else {
-          RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): hwnd=" << hwnd <<  ", msg=" << msg;
+          RTC_LOG(LS_INFO) << "Window Proc(" << ::GetWindowLongPtr(hwnd, GWLP_USERDATA) << "): Thread=" << rtc::CurrentThreadId() << ", hwnd=" << hwnd <<  ", msg=" << msg;
         }
       }
       break;
@@ -464,6 +471,15 @@ void WindowBorderWin::OnScreenRectChanged(const DesktopRect &screen_rect) {
   }
 
   if (!border_rect.equals(screen_rect)) {
+    RTC_LOG(LS_INFO) << "OnScreenRectChanged: ("
+                     << border_rect.left() << ", "
+                     << border_rect.top() << ", "
+                     << border_rect.right() << ", "
+                     << border_rect.bottom() << ") => ("
+                     << screen_rect.left() << ", "
+                     << screen_rect.top() << ", "
+                     << screen_rect.right() << ", "
+                     << screen_rect.bottom() << ")";
     UpdateBorderWindow(border_hwnd_, screen_rect);
   }
 }

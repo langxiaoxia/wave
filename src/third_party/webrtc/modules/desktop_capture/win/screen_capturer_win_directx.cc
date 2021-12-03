@@ -132,7 +132,7 @@ void ScreenCapturerWinDirectx::CaptureFrame() {
     result = controller_->Duplicate(frames_.current_frame());
   } else {
     result = controller_->DuplicateMonitor(frames_.current_frame(),
-                                           current_screen_index_); //*by xxlang@2021-11-16
+                                           current_screen_id_);
   }
 
   using DuplicateResult = DxgiDuplicatorController::Result;
@@ -192,15 +192,9 @@ bool ScreenCapturerWinDirectx::GetSourceList(SourceList* sources) {
 }
 
 bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
-  //+by xxlang@2021-11-08 {
-  if (!IsScreenValid(id, &current_device_key_)) {
-    return false;
-  }
-  //+by xxlang@2021-11-08 }
-
   if (id == kFullDesktopScreenId) {
+    RTC_LOG(LS_INFO) << "Current Screen Index " << current_screen_id_ << " => " << id;
     current_screen_id_ = id;
-    current_screen_index_ = id;
     return true;
   }
 
@@ -211,19 +205,18 @@ bool ScreenCapturerWinDirectx::SelectSource(SourceId id) {
 
   int index;
   index = GetIndexFromScreenId(id, device_names);
-  RTC_LOG(LS_INFO) << "GetIndexFromScreenId(" << id << ") = " << index;
   if (index == -1) {
     return false;
   }
 
-  current_screen_id_ = id;
-  current_screen_index_ = index;
+  RTC_LOG(LS_INFO) << "Current Screen Index " << current_screen_id_ << " => " << index;
+  current_screen_id_ = index;
   return true;
 }
 
 //+by xxlang@2021-11-08 {
 DesktopRect ScreenCapturerWinDirectx::GetSelectedScreenRect() {
-  return GetScreenRect(current_screen_id_, current_device_key_);
+  return controller_->MonitorRect(current_screen_id_);
 }
 //+by xxlang@2021-11-08 }
 

@@ -556,16 +556,7 @@ bool WindowCaptureHelperWin::EnumerateCapturableWindows(
 }
 
 //+by xxlang@2021-11-19 {
-bool WindowCaptureHelperWin::GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect, DesktopRect* original_rect) {
-  DesktopRect window_rect;
-  if (!GetWindowRect(hwnd, &window_rect)) {
-    return false;
-  }
-
-  if (original_rect) {
-    *original_rect = window_rect;
-  }
-
+bool WindowCaptureHelperWin::GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect) {
   if (!dwm_get_window_attribute_func_) {
     return false;
   }
@@ -573,9 +564,6 @@ bool WindowCaptureHelperWin::GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_
   RECT rect;
   int ret = dwm_get_window_attribute_func_(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &rect, sizeof(rect));
   if (S_OK != ret) {
-  	if (original_rect) {
-      RTC_LOG(LS_ERROR) << "DwmGetWindowAttribute failed : error=" << ret;
-    }
     return false;
   }
 

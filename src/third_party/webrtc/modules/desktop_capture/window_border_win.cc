@@ -489,27 +489,54 @@ HWND WindowBorderWin::GetSourceWindow() {
 }
 
 bool WindowBorderWin::GetFrameRect(HWND hwnd, DesktopRect* frame_rect, DesktopRect* original_rect) {
-  if (!GetCroppedWindowRect(hwnd, true, frame_rect, nullptr)) {
-    RTC_LOG(LS_ERROR) << "GetCroppedWindowRect Failed: error=" << GetLastError();
+  DesktopRect window_rect;
+  if (!GetWindowRect(hwnd, &window_rect)) {
+    return false;
+  }
+
+  if (original_rect) {
+    *original_rect = window_rect;
+  }
+  *frame_rect = window_rect; // use window rect as default
+
+  bool is_maximized = false;
+  if (!IsWindowMaximized(hwnd, &is_maximized)) {
     return false;
   }
 
   DesktopRect dwm_rect;
-  if (!window_capture_helper_.GetExtendedFrameBounds(hwnd, &dwm_rect, original_rect)) {
+  if (!window_capture_helper_.GetExtendedFrameBounds(hwnd, &dwm_rect)) {
+    dwm_rect = window_rect; // use dwm rect if available
+  } else {
+    *frame_rect = dwm_rect;
+  }
+
+  const HMONITOR hMonitor = ::MonitorFromWindow(hwnd, MONITOR_DEFAULTTONULL);
+  if (NULL == hMonitor) {
     return true;
   }
 
-  if (frame_rect->equals(dwm_rect)) {
+  MONITORINFO mi = {};
+  mi.cbSize = sizeof(mi);
+  if (!::GetMonitorInfo(hMonitor, &mi)) {
     return true;
   }
 
-  if (original_rect) {
-    RTC_LOG(LS_INFO) << "cropped_rect: " << frame_rect->left()
-                        << ", " << frame_rect->top()
-                        << ", " << frame_rect->right()
-                        << ", " << frame_rect->bottom();
+  HWND hWndForeground = ::GetForegroundWindow();
+  HWND hWndDesktop = ::GetDesktopWindow();
+  HWND hWndShell = ::GetShellWindow();
+  RTC_LOG(LS_INFO) << "Foreground=" << hWndForeground << ", Desktop=" << hWndDesktop << ", Shell=" << hWndShell;
+
+  const DesktopRect monitor_rect = DesktopRect::MakeLTRB(mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right, mi.rcMonitor.bottom);
+  dwm_rect.IntersectWith(monitor_rect);
+  if (dwm_rect.equals(monitor_rect)) {
+    *frame_rect = dwm_rect; // crop to monitor rect if full screen
+  } else if (is_maximized) {
+    const DesktopRect work_rect = DesktopRect::MakeLTRB(mi.rcWork.left, mi.rcWork.top, mi.rcWork.right, mi.rcWork.bottom);
+    dwm_rect.IntersectWith(work_rect);
+    *frame_rect = dwm_rect; // crop to work rect if maximized
   }
-  *frame_rect = dwm_rect;
+
   return true;
 }
 

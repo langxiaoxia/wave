@@ -116,7 +116,7 @@ class WindowCaptureHelperWin {
   bool IsWindowVisibleOnCurrentDesktop(HWND hwnd);
   bool IsWindowCloaked(HWND hwnd);
   bool EnumerateCapturableWindows(DesktopCapturer::SourceList* results);
-  bool GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect, DesktopRect* original_rect); //+by xxlang@2021-11-19
+  bool GetExtendedFrameBounds(HWND hwnd, DesktopRect* dwm_rect); //+by xxlang@2021-11-19
   bool SetExcludedFromPeek(HWND hwnd, BOOL bFlag); //+by xxlang@2021-11-22
 
  private:

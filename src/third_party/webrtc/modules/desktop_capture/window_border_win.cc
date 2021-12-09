@@ -521,12 +521,12 @@ bool WindowBorderWin::GetFrameRect(HWND hwnd, DesktopRect* frame_rect, DesktopRe
   if (!::GetMonitorInfo(hMonitor, &mi)) {
     return true;
   }
-
+/*
   HWND hWndForeground = ::GetForegroundWindow();
   HWND hWndDesktop = ::GetDesktopWindow();
   HWND hWndShell = ::GetShellWindow();
   RTC_LOG(LS_INFO) << "Foreground=" << hWndForeground << ", Desktop=" << hWndDesktop << ", Shell=" << hWndShell;
-
+*/
   const DesktopRect monitor_rect = DesktopRect::MakeLTRB(mi.rcMonitor.left, mi.rcMonitor.top, mi.rcMonitor.right, mi.rcMonitor.bottom);
   dwm_rect.IntersectWith(monitor_rect);
   if (dwm_rect.equals(monitor_rect)) {

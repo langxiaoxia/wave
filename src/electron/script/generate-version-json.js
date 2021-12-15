@@ -2,10 +2,15 @@ const fs = require('fs');
 const path = require('path');
 const semver = require('semver');
 
+//+by xxlang@2021-12-15 {
+const moment = require('moment');
+moment.locale('zh-cn');
+const tag = moment().format('YYYYMMDD');
+//+by xxlang@2021-12-15 }
+
 const outputPath = process.argv[2];
 
 const currentVersion = fs.readFileSync(path.resolve(__dirname, '../ELECTRON_VERSION'), 'utf8').trim();
-const tag = fs.readFileSync(path.resolve(__dirname, '../ELECTRON_TAG'), 'utf8').trim(); //+by xxlang@2021-12-09
 
 const parsed = semver.parse(currentVersion);
 

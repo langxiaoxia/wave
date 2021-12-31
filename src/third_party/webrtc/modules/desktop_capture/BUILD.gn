@@ -395,6 +395,7 @@ rtc_library("desktop_capture_generic") {
       "mouse_cursor_monitor_linux.cc",
       "screen_capturer_linux.cc",
       "window_capturer_linux.cc",
+      "window_border_linux.cc",
     ]
 
     if (build_with_mozilla && (is_linux || is_chromeos)) {

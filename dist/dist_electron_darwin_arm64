@@ -1,0 +1,27 @@
+#!/bin/sh
+
+export NO_AUTH_BOTO_CONFIG=$HOME/https_proxy.boto
+export http_proxy=http://127.0.0.1:8118
+export https_proxy=http://127.0.0.1:8118
+
+e use arm64
+
+root_dir=`e show root`
+out_dir=`e show outdir`
+
+cd $root_dir/src/electron
+git pull
+e sync
+
+rm -f $out_dir/dsym.zip
+rm -f $out_dir/dist.zip
+
+e build
+
+cd $root_dir/src
+electron/script/zip-symbols.py -b $out_dir
+mv $out_dir/dsym.zip $out_dir/electron-v13.6.3-darwin-arm64-dsym.zip
+
+e build electron:dist
+mv $out_dir/dist.zip $out_dir/electron-v13.6.3-darwin-arm64.zip
+

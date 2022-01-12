@@ -10,19 +10,18 @@ for /F %%i in ('e show root') do set "root_dir=%%i"
 for /F %%i in ('e show outdir') do set "out_dir=%%i"
 
 cd %root_dir%\src\electron
-git pull
+call git pull
 call e sync
-
-del %out_dir%\pdb.zip
-del %out_dir%\dist.zip
 
 call e build
 
-cd %root_dir%\src
-python electron\script\zip-symbols.py -b %out_dir%
-rename %out_dir%\pdb.zip %out_dir%\electron-v13.6.3-win32-x64-pdb.zip
-
+del %out_dir%\dist.zip
 call e build electron:dist
 rename %out_dir%\dist.zip %out_dir%\electron-v13.6.3-win32-x64.zip
+
+cd %root_dir%\src
+del %out_dir%\pdb.zip
+python electron\script\zip-symbols.py -b %out_dir%
+rename %out_dir%\pdb.zip %out_dir%\electron-v13.6.3-win32-x64-pdb.zip
 
 pause

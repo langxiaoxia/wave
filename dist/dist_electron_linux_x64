@@ -14,18 +14,19 @@ cd $root_dir/src/electron
 git pull
 e sync
 
-rm -f $out_dir/debug.zip
-rm -f $out_dir/dist.zip
-
 e build
 
 cd $root_dir/src
+rm -fr out/$out_name/debug
 electron/script/copy-debug-symbols.py --target-cpu="x64" --out-dir=out/$out_name/debug --compress -d out/$out_name
 electron/script/strip-binaries.py --target-cpu="x64" -d out/$out_name
 electron/script/add-debug-link.py --target-cpu="x64" --debug-dir=out/$out_name/debug -d out/$out_name
-electron/script/zip-symbols.py -b $out_dir
-mv out/$out_name/debug.zip out/$out_name/electron-v13.6.3-linux-x64-debug.zip
 
+rm -f $out_dir/dist.zip
 e build electron:dist
-mv out/$out_name/dist.zip out/$out_name/electron-v13.6.3-linux-x64.zip
+mv $out_dir/dist.zip $out_dir/electron-v13.6.3-linux-x64.zip
+
+rm -f $out_dir/debug.zip
+electron/script/zip-symbols.py -b $out_dir
+mv $out_dir/debug.zip $out_dir/electron-v13.6.3-linux-x64-debug.zip
 

@@ -13,15 +13,14 @@ cd $root_dir/src/electron
 git pull
 e sync
 
-rm -f $out_dir/dsym.zip
-rm -f $out_dir/dist.zip
-
 e build
 
-cd $root_dir/src
-electron/script/zip-symbols.py -b $out_dir
-mv $out_dir/dsym.zip $out_dir/electron-v13.6.3-darwin-arm64-dsym.zip
-
+rm -f $out_dir/dist.zip
 e build electron:dist
 mv $out_dir/dist.zip $out_dir/electron-v13.6.3-darwin-arm64.zip
+
+cd $root_dir/src
+rm -f $out_dir/dsym.zip
+electron/script/zip-symbols.py -b $out_dir
+mv $out_dir/dsym.zip $out_dir/electron-v13.6.3-darwin-arm64-dsym.zip
 

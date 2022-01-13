@@ -17,11 +17,13 @@ call e build
 
 del %out_dir%\dist.zip
 call e build electron:dist
-rename %out_dir%\dist.zip %out_dir%\electron-v13.6.3-win32-ia32.zip
+del %out_dir%\electron-v13.6.3-win32-ia32.zip
+ren %out_dir%\dist.zip electron-v13.6.3-win32-ia32.zip
 
 cd %root_dir%\src
 del %out_dir%\pdb.zip
-python electron\script\zip-symbols.py -b %out_dir%
-rename %out_dir%\pdb.zip %out_dir%\electron-v13.6.3-win32-ia32-pdb.zip
+call python electron\script\zip-symbols.py -b %out_dir%
+del %out_dir%\electron-v13.6.3-win32-ia32-pdb.zip
+ren %out_dir%\pdb.zip electron-v13.6.3-win32-ia32-pdb.zip
 
 pause

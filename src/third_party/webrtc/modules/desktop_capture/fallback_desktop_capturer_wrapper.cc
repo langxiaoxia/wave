@@ -122,6 +122,7 @@ void FallbackDesktopCapturerWrapper::CaptureFrame() {
       if (first_capture_) {
         first_capture_ = false;
       } else {
+        RTC_LOG(LS_WARNING) << "FallbackDesktopCapturerWrapper create border for screen " << selected_screen_;
         window_border_->CreateForScreen(GetSelectedScreenRect());
       }
     }

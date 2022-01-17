@@ -34,19 +34,24 @@
 #include "rtc_base/sanitizer.h"
 #include "rtc_base/time_utils.h"
 #include "rtc_base/trace_event.h"
+#include "rtc_base/platform_thread_types.h"
 
 namespace webrtc {
 
 ScreenCapturerX11::ScreenCapturerX11(bool enable_border)
-    : enable_border_(enable_border), //+by xxlang@2021-12-28
-      first_capture_(true), //+by xxlang@2021-12-28
-      window_border_(DesktopCapturer::CreateWindowBorder()) //+by xxlang@2021-12-28
+      //+by xxlang@2021-12-28 {
+    : enable_border_(enable_border),
+      first_capture_(true),
+      window_border_(DesktopCapturer::CreateWindowBorder())
+      //+by xxlang@2021-12-28 }
 {
-  RTC_LOG(LS_INFO) << "ScreenCapturerX11 " << (enable_border_ ? "with" : "without") << " border";
+  RTC_LOG(LS_INFO) << "ScreenCapturerX11(" << this << ") " << (enable_border_ ? "with" : "without") << " border";
   helper_.SetLogGridSize(4);
 }
 
 ScreenCapturerX11::~ScreenCapturerX11() {
+  window_border_ = nullptr; //+by xxlang@2022-01-14
+  RTC_LOG(LS_INFO) << "~ScreenCapturerX11(" << this << ") " << (enable_border_ ? "with" : "without") << " border";
   options_.x_display()->RemoveEventHandler(ConfigureNotify, this);
   if (use_damage_) {
     options_.x_display()->RemoveEventHandler(damage_event_base_ + XDamageNotify,
@@ -108,6 +113,12 @@ bool ScreenCapturerX11::Init(const DesktopCaptureOptions& options) {
   // Default source set here so that selected_monitor_rect_ is sized correctly.
   SelectSource(kFullDesktopScreenId);
 
+  //+by xxlang@2021-12-28 {
+  if (enable_border_) {
+    window_border_->Init(options_.x_display(), DefaultScreen(display()), true);
+  }
+  //+by xxlang@2021-12-28 }
+
   return true;
 }
 
@@ -149,7 +160,7 @@ void ScreenCapturerX11::InitXDamage() {
                                         this);
 
   use_damage_ = true;
-  RTC_LOG(LS_INFO) << "Using XDamage extension.";
+  RTC_LOG(LS_INFO) << "Using XDamage extension, event_base=" << damage_event_base_;
 }
 
 RTC_NO_SANITIZE("cfi-icall")
@@ -169,7 +180,7 @@ void ScreenCapturerX11::InitXrandr() {
       if (get_monitors_ && free_monitors_) {
         use_randr_ = true;
         RTC_LOG(LS_INFO) << "Using XRandR extension v" << major_version << '.'
-                         << minor_version << '.';
+                         << minor_version << ", event_base="  << randr_event_base_;
         monitors_ =
             get_monitors_(display(), root_window_, true, &num_monitors_);
 
@@ -199,7 +210,15 @@ void ScreenCapturerX11::UpdateMonitors() {
 
   if (selected_monitor_name_) {
     if (selected_monitor_name_ == static_cast<Atom>(kFullDesktopScreenId)) {
-      RTC_LOG(LS_INFO) << "XRandR desktop rect updated.";
+      RTC_LOG(LS_INFO) << "XRandR desktop rect updated. ("
+                      << selected_monitor_rect_.left() << ", "
+                      << selected_monitor_rect_.top() << ", "
+                      << selected_monitor_rect_.right() << ", "
+                      << selected_monitor_rect_.bottom() << ") => ("
+                      << 0 << ", "
+                      << 0 << ", "
+                      << x_server_pixel_buffer_.window_size().width() << ", "
+                      << x_server_pixel_buffer_.window_size().height() << ")";
       selected_monitor_rect_ =
           DesktopRect::MakeSize(x_server_pixel_buffer_.window_size());
       window_border_->OnScreenRectChanged(selected_monitor_rect_); //+by xxlang@2021-12-28
@@ -209,7 +228,15 @@ void ScreenCapturerX11::UpdateMonitors() {
     for (int i = 0; i < num_monitors_; ++i) {
       XRRMonitorInfo& m = monitors_[i];
       if (selected_monitor_name_ == m.name) {
-        RTC_LOG(LS_INFO) << "XRandR monitor " << m.name << " rect updated.";
+        RTC_LOG(LS_INFO) << "XRandR monitor " << m.name << " rect updated. ("
+                      << selected_monitor_rect_.left() << ", "
+                      << selected_monitor_rect_.top() << ", "
+                      << selected_monitor_rect_.right() << ", "
+                      << selected_monitor_rect_.bottom() << ") => ("
+                      << m.x << ", "
+                      << m.y << ", "
+                      << (m.x + m.width) << ", "
+                      << (m.y + m.height) << ")";
         selected_monitor_rect_ =
             DesktopRect::MakeXYWH(m.x, m.y, m.width, m.height);
         window_border_->OnScreenRectChanged(selected_monitor_rect_); //+by xxlang@2021-12-28
@@ -255,11 +282,13 @@ void ScreenCapturerX11::CaptureFrame() {
   //+by xxlang@2021-12-28 {
   if (enable_border_ && !window_border_->IsCreated()) {
     if (first_capture_) {
+      RTC_LOG(LS_WARNING) << "ScreenCapturerX11(" << this << "): Thread=" << rtc::CurrentThreadId() << ", screen=" << selected_monitor_name_;
       first_capture_ = false;
     } else {
-      RTC_LOG(LS_INFO) << "ScreenCapturerX11 create border for screen " << selected_monitor_name_ <<
-                          ", rect(" << selected_monitor_rect_.left() << ", " << selected_monitor_rect_.top() << ") " << selected_monitor_rect_.width() << "x" << selected_monitor_rect_.height();
-      window_border_->CreateForScreen(options_.x_display(), DefaultScreen(display()), selected_monitor_rect_);
+      RTC_LOG(LS_INFO) << "ScreenCapturerX11 create border for screen " << selected_monitor_name_
+                       << ", rect(" << selected_monitor_rect_.left() << ", " << selected_monitor_rect_.top()
+                       << ") " << selected_monitor_rect_.width() << "x" << selected_monitor_rect_.height();
+      window_border_->CreateForScreen(selected_monitor_rect_);
     }
   }
   //+by xxlang@2021-12-28 }
@@ -345,6 +374,7 @@ bool ScreenCapturerX11::SelectSource(SourceId id) {
 }
 
 bool ScreenCapturerX11::HandleXEvent(const XEvent& event) {
+  RTC_LOG(LS_INFO) << "ScreenCapturerX11 event=" << event.type << ", window=" << event.xany.window;
   if (use_damage_ && (event.type == damage_event_base_ + XDamageNotify)) {
     const XDamageNotifyEvent* damage_event =
         reinterpret_cast<const XDamageNotifyEvent*>(&event);
@@ -356,7 +386,8 @@ bool ScreenCapturerX11::HandleXEvent(const XEvent& event) {
              event.type == randr_event_base_ + RRScreenChangeNotify) {
     RTC_LOG(LS_INFO) << "XRandR screen change event received.";
     XRRUpdateConfiguration(const_cast<XEvent*>(&event));
-    UpdateMonitors();
+//  UpdateMonitors(); //-by xxlang@2022-01-14
+    ScreenConfigurationChanged(); //+by xxlang@2022-01-14
     return true;
   } else if (event.type == ConfigureNotify) {
     RTC_LOG(LS_INFO) << "Screen configure change event received.";
@@ -432,7 +463,12 @@ void ScreenCapturerX11::ScreenConfigurationChanged() {
                          "configuration change.";
   }
 
-  if (!use_randr_) {
+  if (use_randr_) {
+    // Adding/removing RANDR monitors can generate a ConfigureNotify event
+    // without generating any RRScreenChangeNotify event. So it is important to
+    // update the monitors here even if the screen resolution hasn't changed.
+    UpdateMonitors(); //+by xxlang@2022-01-14
+  } else {
     selected_monitor_rect_ =
         DesktopRect::MakeSize(x_server_pixel_buffer_.window_size());
     window_border_->OnScreenRectChanged(selected_monitor_rect_); //+by xxlang@2021-12-28

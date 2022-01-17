@@ -17,40 +17,49 @@
 #include "api/scoped_refptr.h"
 #include "modules/desktop_capture/window_border.h"
 #include "modules/desktop_capture/linux/shared_x_display.h"
-#include "modules/desktop_capture/rgba_color.h"
+#include "modules/desktop_capture/linux/window_list_utils.h"
 #include "rtc_base/constructor_magic.h"
 #include "rtc_base/logging.h"
 #include "rtc_base/platform_thread_types.h"
-#include "rtc_base/checks.h"
 
 namespace webrtc {
 
 namespace {
 
-class WindowBorderLinux : public WindowBorder {
+class WindowBorderLinux : public WindowBorder,
+                          public SharedXDisplay::XEventHandler {
  public:
   explicit WindowBorderLinux();
   ~WindowBorderLinux() override;
 
+  // WindowBorder interface.
+  void Init(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, bool handle_event) override;
   bool CreateForWindow(DesktopCapturer::SourceId source_id) override;
-  bool CreateForScreen(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, const DesktopRect &window_rect) override;
+  bool CreateForScreen(const DesktopRect &window_rect) override;
   bool IsCreated() override;
   void Destroy() override;
   WindowId GetBorderId() override;
   void OnScreenRectChanged(const DesktopRect &screen_rect) override;
 
+  // SharedXDisplay::XEventHandler interface.
+  bool HandleXEvent(const XEvent& event) override;
+
  private:
+  bool Create(const DesktopRect &window_rect, Window source_window);
+  void Deinit();
   Display* display() { return x_display_->display(); }
+  bool prepare();
   void allow_input_passthrough();
   void draw();
 
   rtc::scoped_refptr<SharedXDisplay> x_display_;
+  int screen_num_ = 0;
   XVisualInfo vinfo_ = { 0 };
   DesktopRect border_rect_;
-  Window window_ = 0;
-  Window root_ = 0;
-  cairo_surface_t* surf_ = nullptr;
-  cairo_t *cr_ = nullptr;
+  Window border_window_ = 0;
+  Window source_window_ = 0;
+  cairo_surface_t* surface_ = nullptr;
+  cairo_t* cairo_ = nullptr;
 
   RTC_DISALLOW_COPY_AND_ASSIGN(WindowBorderLinux);
 };
@@ -60,78 +69,52 @@ WindowBorderLinux::WindowBorderLinux() {
 
 WindowBorderLinux::~WindowBorderLinux() {
   Destroy();
+  Deinit();
+}
+
+void WindowBorderLinux::Init(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, bool handle_event) {
+  if (x_display_) {
+    RTC_LOG(LS_WARNING) << "Init(" << this << "): Thread=" << rtc::CurrentThreadId();
+    return;
+  }
+
+  RTC_LOG(LS_INFO) << "Init(" << this << "): Thread=" << rtc::CurrentThreadId();
+  x_display_ = x_display;
+  screen_num_ = screen_num;
+
+  if (handle_event) {
+    x_display_->AddEventHandler(MapNotify, this);
+    x_display_->AddEventHandler(ConfigureNotify, this);
+    x_display_->AddEventHandler(Expose, this);
+  }
 }
 
 bool WindowBorderLinux::CreateForWindow(DesktopCapturer::SourceId source_id) {
-  if (IsCreated()) {
+  Window source_window = static_cast<Window>(source_id);
+  DesktopRect window_rect;
+  if (!GetWindowRect(display(), source_window, &window_rect, nullptr)) {
+    RTC_LOG(LS_ERROR) << "Failed to get source window rect.";
+    return false;
+  }
+
+  if (!Create(window_rect, source_window)) {
     return false;
   }
 
   return true;
 }
 
-bool WindowBorderLinux::CreateForScreen(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, const DesktopRect &window_rect) {
-  if (IsCreated()) {
+bool WindowBorderLinux::CreateForScreen(const DesktopRect &window_rect) {
+  Window source_window = RootWindow(display(), screen_num_);
+  if (!Create(window_rect, source_window)) {
     return false;
   }
 
-  if (window_rect.is_empty()) {
-    return false;
-  }
-
-  x_display_ = x_display;
-  root_ = RootWindow(display(), screen_num);
-  if (!root_) {
-    return false;
-  }
-
-  if (!XMatchVisualInfo(display(), screen_num, 32, TrueColor, &vinfo_)) {
-    return false;
-  }
-
-  XSetWindowAttributes attr = { 0 };
-  attr.override_redirect = True;
-  attr.colormap = XCreateColormap(display(), root_, vinfo_.visual, AllocNone);
-  attr.border_pixel = 0;
-  attr.background_pixel = 0;
-
-  border_rect_ = window_rect;
-  window_ = XCreateWindow(display(), root_,
-      border_rect_.left(), border_rect_.top(), border_rect_.width(), border_rect_.height(), 0,
-      vinfo_.depth, InputOutput, vinfo_.visual,
-      CWOverrideRedirect | CWColormap | CWBorderPixel | CWBackPixel, &attr);
-  if (!window_) {
-    Destroy();
-    return false;
-  }
-
-  allow_input_passthrough();
-
-  surf_ = cairo_xlib_surface_create(display(), window_, vinfo_.visual, border_rect_.width(), border_rect_.height());
-  if (surf_ == nullptr) {
-    Destroy();
-    return false;
-  }
-
-  cr_ = cairo_create(surf_);
-  if (cr_ == nullptr) {
-    Destroy();
-    return false;
-  }
-
-  RTC_LOG(LS_INFO) << "Create border window OK: window=" << window_ <<
-                      ", screen=" << screen_num <<
-                      ", root=" << root_ <<
-                      ", rect=(" << border_rect_.left() << ", " << border_rect_.top() << ") " << border_rect_.width() << "x" << border_rect_.height();
-
-  XMapWindow(display(), window_);
-  draw();
-  XFlush(display());
   return true;
 }
 
 bool WindowBorderLinux::IsCreated() {
-  if (window_) {
+  if (border_window_) {
     return true;
   } else {
     return false;
@@ -143,27 +126,40 @@ void WindowBorderLinux::Destroy() {
     return;
   }
 
-  if (window_) {
-    XUnmapWindow(display(), window_);
-    XDestroyWindow(display(), window_);
-    window_ = 0;
+  if (border_window_) {
+    RTC_LOG(LS_INFO) << "Destroy(" << this << "): Thread=" << rtc::CurrentThreadId() << ", border_window=" << border_window_;
+    if (border_window_ != source_window_) {
+      XUnmapWindow(display(), border_window_);
+      XDestroyWindow(display(), border_window_);
+    }
+    border_window_ = 0;
   }
 
-  if (cr_) {
-    cairo_destroy(cr_);
-    cr_ = nullptr;
+  if (cairo_) {
+    cairo_destroy(cairo_);
+    cairo_ = nullptr;
   }
 
-  if (surf_) {
-    cairo_surface_destroy(surf_);
-    surf_ = nullptr;
+  if (surface_) {
+    cairo_surface_destroy(surface_);
+    surface_ = nullptr;
   }
 
   XFlush(display());
 }
 
+void WindowBorderLinux::Deinit() {
+  if (x_display_) {
+    RTC_LOG(LS_INFO) << "Deinit(" << this << "): Thread=" << rtc::CurrentThreadId();
+    x_display_->RemoveEventHandler(MapNotify, this);
+    x_display_->RemoveEventHandler(ConfigureNotify, this);
+    x_display_->RemoveEventHandler(Expose, this);
+    x_display_ = nullptr;
+  }
+}
+
 WindowId WindowBorderLinux::GetBorderId() {
-  return window_;
+  return border_window_;
 }
 
 void WindowBorderLinux::OnScreenRectChanged(const DesktopRect &screen_rect) {
@@ -171,47 +167,206 @@ void WindowBorderLinux::OnScreenRectChanged(const DesktopRect &screen_rect) {
     return;
   }
 
-  RTC_LOG(LS_INFO) << "OnScreenRectChanged: ("
-                   << border_rect_.left() << ", "
-                   << border_rect_.top() << ", "
-                   << border_rect_.right() << ", "
-                   << border_rect_.bottom() << ") => ("
-                   << screen_rect.left() << ", "
-                   << screen_rect.top() << ", "
-                   << screen_rect.right() << ", "
-                   << screen_rect.bottom() << ")";
+  if (!border_rect_.equals(screen_rect)) {
+    RTC_LOG(LS_INFO) << "OnScreenRectChanged: ("
+                     << border_rect_.left() << ", "
+                     << border_rect_.top() << ", "
+                     << border_rect_.right() << ", "
+                     << border_rect_.bottom() << ") => ("
+                     << screen_rect.left() << ", "
+                     << screen_rect.top() << ", "
+                     << screen_rect.right() << ", "
+                     << screen_rect.bottom() << ")";
+    if (screen_rect.is_empty()) {
+      Destroy();
+      return;
+    }
 
-  if (border_rect_.equals(screen_rect)) {
-    return;
+    border_rect_ = screen_rect;
+    if (border_window_ == source_window_) {
+      if (prepare()) {
+        draw();
+      }
+    } else {
+      RTC_LOG(LS_INFO) << "XMoveResizeWindow";
+      XMoveResizeWindow(display(), border_window_, border_rect_.left(), border_rect_.top(), border_rect_.width(), border_rect_.height());
+      XFlush(display());
+    }
+  } else {
+    if (border_window_ == source_window_) {
+      draw();
+    }
+  }
+}
+
+bool WindowBorderLinux::HandleXEvent(const XEvent &event) {
+  if (!IsCreated()) {
+    return false;
   }
 
-  if (screen_rect.is_empty()) {
-    Destroy();
-    return;
+  if (event.xany.window != border_window_) {
+    return false;
   }
 
-  border_rect_ = screen_rect;
-  XMoveResizeWindow(display(), window_, border_rect_.left(), border_rect_.top(), border_rect_.width(), border_rect_.height());
+  switch (event.type) {
+    case MapNotify:
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=MapNotify";
+      if (prepare()) {
+        draw();
+      } else {
+        Destroy();
+      }
+      break;
 
-  allow_input_passthrough();
-  cairo_xlib_surface_set_size(surf_, border_rect_.width(), border_rect_.height());
+    case Expose:
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=Expose";
+      draw();
+      break;
 
-  draw();
-  XFlush(display());
+    case ConfigureNotify:
+    {
+      XConfigureEvent xe = event.xconfigure;
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=ConfigureNotify"
+          << ", rect(" << xe.x << ", " << xe.y << ") " << xe.width << "x" << xe.height;
+      if (prepare()) {
+        draw();
+      } else {
+        Destroy();
+      }
+      break;
+    }
+
+    default:
+      RTC_LOG(LS_INFO) << "IgnoreXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=" << event.type;
+      break;
+  }
+
+  return true;
+}
+
+bool WindowBorderLinux::Create(const DesktopRect &window_rect, Window source_window) {
+  // check created
+  if (IsCreated()) {
+    RTC_LOG(LS_ERROR) << "Create failed: already created";
+    return false;
+  }
+
+  // check parameter
+  if (window_rect.is_empty()) {
+    RTC_LOG(LS_ERROR) << "Create failed: empty rect";
+    return false;
+  }
+
+  // save border rect
+  border_rect_ = window_rect;
+
+  // save source window
+  source_window_ = source_window;
+
+  if (!XMatchVisualInfo(display(), screen_num_, 32, TrueColor, &vinfo_)) {
+    RTC_LOG(LS_ERROR) << "Create failed: match visual info failed";
+    return false;
+  }
+
+  Window root_window = RootWindow(display(), screen_num_);
+  if (source_window == root_window) { // screen capture
+    // create border window
+    XSetWindowAttributes attr = { 0 };
+    attr.override_redirect = True;
+    attr.colormap = XCreateColormap(display(), root_window, vinfo_.visual, AllocNone);
+    attr.border_pixel = 0;
+    attr.background_pixel = 0;
+    border_window_ = XCreateWindow(display(), root_window,
+        border_rect_.left(), border_rect_.top(), border_rect_.width(), border_rect_.height(), 0,
+        vinfo_.depth, InputOutput, vinfo_.visual,
+        CWOverrideRedirect | CWColormap | CWBorderPixel | CWBackPixel, &attr);
+    if (!border_window_) {
+      RTC_LOG(LS_ERROR) << "Create failed: create window failed";
+      return false;
+    }
+
+    XSelectInput(display(), border_window_, StructureNotifyMask | ExposureMask);
+    XMapWindow(display(), border_window_);
+    XFlush(display());
+  } else { // window capture
+    border_window_ = source_window_;
+    if (prepare()) {
+      draw();
+    } else {
+      Destroy();
+      return false;
+    }
+  }
+
+  RTC_LOG(LS_INFO) << "Create(" << this << "): Thread=" << rtc::CurrentThreadId()
+                   << ", screen_num=" << screen_num_
+                   << ", root_window=" << root_window
+                   << ", source_window=" << source_window_
+                   << ", border_window=" << border_window_
+                   << ", rect(" << border_rect_.left() << ", " << border_rect_.top()
+                   << ") " << border_rect_.width() << "x" << border_rect_.height();
+  return true;
+}
+
+bool WindowBorderLinux::prepare() {
+  if (!IsCreated()) {
+    return false;
+  }
+
+  if (cairo_) {
+    cairo_destroy(cairo_);
+    cairo_ = nullptr;
+  }
+
+  if (surface_) {
+    cairo_surface_destroy(surface_);
+    surface_ = nullptr;
+  }
+
+  surface_ = cairo_xlib_surface_create(display(), border_window_, vinfo_.visual, border_rect_.width(), border_rect_.height());
+  if (surface_ == nullptr) {
+    RTC_LOG(LS_ERROR) << "cairo_xlib_surface_create failed";
+    return false;
+  }
+
+  cairo_ = cairo_create(surface_);
+  if (cairo_ == nullptr) {
+    RTC_LOG(LS_ERROR) << "cairo_create failed";
+    return false;
+  }
+
+  if (border_window_ != source_window_) {
+    allow_input_passthrough();
+  }
+  return true;
 }
 
 void WindowBorderLinux::allow_input_passthrough() {
+  if (!IsCreated()) {
+    return;
+  }
+
+  RTC_LOG(LS_INFO) << "allow_input_passthrough";
   XserverRegion region = XFixesCreateRegion(display(), nullptr, 0);
-  XFixesSetWindowShapeRegion(display(), window_, ShapeBounding, 0, 0, 0);
-  XFixesSetWindowShapeRegion(display(), window_, ShapeInput, 0, 0, region);
+  XFixesSetWindowShapeRegion(display(), border_window_, ShapeBounding, 0, 0, 0);
+  XFixesSetWindowShapeRegion(display(), border_window_, ShapeInput, 0, 0, region);
   XFixesDestroyRegion(display(), region);
+
+  XFlush(display());
 }
 
 void WindowBorderLinux::draw() {
-  cairo_set_line_width (cr_, kBorderWidth);
-  cairo_set_source_rgba(cr_, (double)kBorderColorR / 0xff, (double)kBorderColorG / 0xff, (double)kBorderColorB / 0xff, 1);
-  cairo_rectangle(cr_, kBorderWidth / 2, kBorderWidth / 2, border_rect_.width() - kBorderWidth, border_rect_.height() - kBorderWidth);
-  cairo_stroke(cr_);
+  if (!IsCreated()) {
+    return;
+  }
+
+  RTC_LOG(LS_INFO) << "draw";
+  cairo_set_line_width(cairo_, kBorderWidth);
+  cairo_set_source_rgba(cairo_, (double)kBorderColorR / 0xff, (double)kBorderColorG / 0xff, (double)kBorderColorB / 0xff, 1);
+  cairo_rectangle(cairo_, kBorderWidth / 2, kBorderWidth / 2, border_rect_.width() - kBorderWidth, border_rect_.height() - kBorderWidth);
+  cairo_stroke(cairo_);
+
+  XFlush(display());
 }
 
 }  // namespace

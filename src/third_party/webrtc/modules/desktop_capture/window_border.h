@@ -7,7 +7,7 @@
 
 #if defined(WEBRTC_USE_X11)
 #include "modules/desktop_capture/linux/shared_x_display.h"
-#endif
+#endif // WEBRTC_USE_X11
 
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "modules/desktop_capture/desktop_geometry.h"
@@ -19,12 +19,11 @@ class WindowBorder {
   WindowBorder() = default;
   virtual ~WindowBorder() = default;
 
-  virtual bool CreateForWindow(DesktopCapturer::SourceId source_id) = 0;
 #if defined(WEBRTC_USE_X11)
-  virtual bool CreateForScreen(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, const DesktopRect &window_rect) = 0;
-#else
+  virtual void Init(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, bool handle_event) = 0;
+#endif // WEBRTC_USE_X11
+  virtual bool CreateForWindow(DesktopCapturer::SourceId source_id) = 0;
   virtual bool CreateForScreen(const DesktopRect &window_rect) = 0;
-#endif
   virtual bool IsCreated() = 0;
   virtual void Destroy() = 0;
   virtual WindowId GetBorderId() = 0;

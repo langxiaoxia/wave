@@ -58,6 +58,7 @@ class WindowBorderLinux : public WindowBorder,
   DesktopRect border_rect_;
   Window border_window_ = 0;
   Window source_window_ = 0;
+  DesktopRect frame_extents_;
   cairo_surface_t* surface_ = nullptr;
   cairo_t* cairo_ = nullptr;
 
@@ -97,6 +98,8 @@ bool WindowBorderLinux::CreateForWindow(DesktopCapturer::SourceId source_id) {
     return false;
   }
 
+  GetFrameExtents(display(), source_window, &frame_extents_);
+
   if (!Create(window_rect, source_window)) {
     return false;
   }
@@ -128,7 +131,9 @@ void WindowBorderLinux::Destroy() {
 
   if (border_window_) {
     RTC_LOG(LS_INFO) << "Destroy(" << this << "): Thread=" << rtc::CurrentThreadId() << ", border_window=" << border_window_;
-    if (border_window_ != source_window_) {
+    if (border_window_ == source_window_) {
+      XClearArea(display(), border_window_, 0, 0, border_rect_.width(), border_rect_.height(), True);
+    } else {
       XUnmapWindow(display(), border_window_);
       XDestroyWindow(display(), border_window_);
     }
@@ -210,7 +215,7 @@ bool WindowBorderLinux::HandleXEvent(const XEvent &event) {
 
   switch (event.type) {
     case MapNotify:
-      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=MapNotify";
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", type=MapNotify";
       if (prepare()) {
         draw();
       } else {
@@ -219,14 +224,14 @@ bool WindowBorderLinux::HandleXEvent(const XEvent &event) {
       break;
 
     case Expose:
-      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=Expose";
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", type=Expose";
       draw();
       break;
 
     case ConfigureNotify:
     {
       XConfigureEvent xe = event.xconfigure;
-      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=ConfigureNotify"
+      RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", type=ConfigureNotify"
           << ", rect(" << xe.x << ", " << xe.y << ") " << xe.width << "x" << xe.height;
       if (prepare()) {
         draw();
@@ -237,7 +242,7 @@ bool WindowBorderLinux::HandleXEvent(const XEvent &event) {
     }
 
     default:
-      RTC_LOG(LS_INFO) << "IgnoreXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", event=" << event.type;
+      RTC_LOG(LS_INFO) << "IgnoreXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", type=" << event.type;
       break;
   }
 
@@ -356,14 +361,18 @@ void WindowBorderLinux::allow_input_passthrough() {
 }
 
 void WindowBorderLinux::draw() {
-  if (!IsCreated()) {
+  if (!IsCreated() || cairo_ == nullptr) {
     return;
   }
 
   RTC_LOG(LS_INFO) << "draw";
   cairo_set_line_width(cairo_, kBorderWidth);
-  cairo_set_source_rgba(cairo_, (double)kBorderColorR / 0xff, (double)kBorderColorG / 0xff, (double)kBorderColorB / 0xff, 1);
-  cairo_rectangle(cairo_, kBorderWidth / 2, kBorderWidth / 2, border_rect_.width() - kBorderWidth, border_rect_.height() - kBorderWidth);
+  cairo_set_source_rgba(cairo_, (double)kBorderColorR / 0xff, (double)kBorderColorG / 0xff, (double)kBorderColorB / 0xff, 1.0);
+  cairo_rectangle(cairo_,
+      frame_extents_.left() + kBorderWidth / 2.0,
+      frame_extents_.top() + kBorderWidth / 2.0,
+      border_rect_.width() - frame_extents_.left() - frame_extents_.right() - kBorderWidth,
+      border_rect_.height() - frame_extents_.top() - frame_extents_.bottom() - kBorderWidth);
   cairo_stroke(cairo_);
 
   XFlush(display());

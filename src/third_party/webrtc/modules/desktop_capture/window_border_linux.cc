@@ -189,6 +189,7 @@ void WindowBorderLinux::OnScreenRectChanged(const DesktopRect &screen_rect) {
 
     border_rect_ = screen_rect;
     if (border_window_ == source_window_) {
+      GetFrameExtents(display(), source_window_, &frame_extents_);
       if (prepare()) {
         draw();
       }
@@ -199,6 +200,7 @@ void WindowBorderLinux::OnScreenRectChanged(const DesktopRect &screen_rect) {
     }
   } else {
     if (border_window_ == source_window_) {
+      GetFrameExtents(display(), source_window_, &frame_extents_);
       draw();
     }
   }

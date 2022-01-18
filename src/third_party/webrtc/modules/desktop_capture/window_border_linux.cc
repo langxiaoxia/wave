@@ -270,13 +270,13 @@ bool WindowBorderLinux::Create(const DesktopRect &window_rect, Window source_win
   // save source window
   source_window_ = source_window;
 
-  if (!XMatchVisualInfo(display(), screen_num_, 32, TrueColor, &vinfo_)) {
-    RTC_LOG(LS_ERROR) << "Create failed: match visual info failed";
-    return false;
-  }
-
   Window root_window = RootWindow(display(), screen_num_);
   if (source_window == root_window) { // screen capture
+    if (!XMatchVisualInfo(display(), screen_num_, 32, TrueColor, &vinfo_)) {
+      RTC_LOG(LS_ERROR) << "Create failed: no matched visual info";
+      return false;
+    }
+
     // create border window
     XSetWindowAttributes attr = { 0 };
     attr.override_redirect = True;
@@ -296,6 +296,17 @@ bool WindowBorderLinux::Create(const DesktopRect &window_rect, Window source_win
     XMapWindow(display(), border_window_);
     XFlush(display());
   } else { // window capture
+    XWindowAttributes attributes;
+    if (!XGetWindowAttributes(display(), source_window_, &attributes)) {
+      RTC_LOG(LS_ERROR) << "Create failed: get window attributes failed";
+      return false;
+    }
+
+    if (!XMatchVisualInfo(display(), screen_num_, attributes.depth, TrueColor, &vinfo_)) {
+      RTC_LOG(LS_ERROR) << "Create failed: no matched visual info";
+      return false;
+    }
+
     border_window_ = source_window_;
     if (prepare()) {
       draw();
@@ -330,6 +341,7 @@ bool WindowBorderLinux::prepare() {
     surface_ = nullptr;
   }
 
+  RTC_LOG(LS_INFO) << "prepare surface width=" << border_rect_.width() << ", height=" << border_rect_.height();
   surface_ = cairo_xlib_surface_create(display(), border_window_, vinfo_.visual, border_rect_.width(), border_rect_.height());
   if (surface_ == nullptr) {
     RTC_LOG(LS_ERROR) << "cairo_xlib_surface_create failed";
@@ -367,7 +379,7 @@ void WindowBorderLinux::draw() {
     return;
   }
 
-  RTC_LOG(LS_INFO) << "draw";
+  RTC_LOG(LS_INFO) << "draw border left=" << frame_extents_.left() << ", top=" << frame_extents_.top();
   cairo_set_line_width(cairo_, kBorderWidth);
   cairo_set_source_rgba(cairo_, (double)kBorderColorR / 0xff, (double)kBorderColorG / 0xff, (double)kBorderColorB / 0xff, 1.0);
   cairo_rectangle(cairo_,

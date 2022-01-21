@@ -1,4 +1,6 @@
-pause 
+@echo off
+
+setlocal
 
 set NO_AUTH_BOTO_CONFIG=%USERPROFILE%\https_proxy.boto
 set http_proxy=http://127.0.0.1:8118
@@ -25,5 +27,3 @@ del %out_dir%\pdb.zip
 call python electron\script\zip-symbols.py -b %out_dir%
 del %out_dir%\electron-v13.6.3-win32-ia32-pdb.zip
 ren %out_dir%\pdb.zip electron-v13.6.3-win32-ia32-pdb.zip
-
-pause

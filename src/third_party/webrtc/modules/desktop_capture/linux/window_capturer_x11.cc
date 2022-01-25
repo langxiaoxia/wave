@@ -46,7 +46,7 @@ WindowCapturerX11::WindowCapturerX11(const DesktopCaptureOptions& options)
   RTC_LOG(LS_INFO) << "WindowCapturerX11(" << this << ") " << (enable_border_ ? "with" : "without") << " border";
   //+by xxlang@2022-01-04 {
   if (enable_border_) {
-    window_border_->Init(x_display_, DefaultScreen(display()), false);
+    window_border_->Init(x_display_, DefaultScreen(display()));
   }
   //+by xxlang@2022-01-04 }
 
@@ -56,27 +56,18 @@ WindowCapturerX11::WindowCapturerX11(const DesktopCaptureOptions& options)
       // XCompositeNameWindowPixmap() requires version 0.2
       (major_version > 0 || minor_version >= 2)) {
     has_composite_extension_ = true;
+    RTC_LOG(LS_INFO) << "Xcomposite extension v" << major_version << "." << minor_version;
   } else {
     RTC_LOG(LS_INFO) << "Xcomposite extension not available or too old.";
   }
 
   x_display_->AddEventHandler(ConfigureNotify, this);
-  //+by xxlang@2022-01-14 {
-  x_display_->AddEventHandler(Expose, this);
-  x_display_->AddEventHandler(VisibilityNotify, this);
-  x_display_->AddEventHandler(PropertyNotify, this);
-  //+by xxlang@2022-01-14 }
 }
 
 WindowCapturerX11::~WindowCapturerX11() {
   window_border_ = nullptr; //+by xxlang@2022-01-14
   RTC_LOG(LS_INFO) << "~WindowCapturerX11(" << this << ") " << (enable_border_ ? "with" : "without") << " border";
   x_display_->RemoveEventHandler(ConfigureNotify, this);
-  //+by xxlang@2022-01-14 {
-  x_display_->RemoveEventHandler(Expose, this);
-  x_display_->RemoveEventHandler(VisibilityNotify, this);
-  x_display_->RemoveEventHandler(PropertyNotify, this);
-  //+by xxlang@2022-01-14 }
 }
 
 bool WindowCapturerX11::GetSourceList(SourceList* sources) {
@@ -95,7 +86,7 @@ bool WindowCapturerX11::SelectSource(SourceId id) {
     return false;
 
   // Tell the X server to send us window resizing events.
-  XSelectInput(display(), id, StructureNotifyMask | VisibilityChangeMask | PropertyChangeMask | ExposureMask); //*by xxlang@2022-01-14
+  XSelectInput(display(), id, StructureNotifyMask);
 
   selected_window_ = id;
 
@@ -222,8 +213,6 @@ void WindowCapturerX11::CaptureFrame() {
   frame->set_top_left(x_server_pixel_buffer_.window_rect().top_left());
 
   callback_->OnCaptureResult(Result::SUCCESS, std::move(frame));
-
-//  window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect());
 }
 
 bool WindowCapturerX11::IsOccluded(const DesktopVector& pos) {
@@ -235,30 +224,17 @@ bool WindowCapturerX11::HandleXEvent(const XEvent& event) {
   if (event.type == ConfigureNotify) {
     XConfigureEvent xce = event.xconfigure;
     if (xce.window == selected_window_) {
-      RTC_LOG(LS_INFO) << "HandleXEvent: event=ConfigureNotify"
-          << ", rect(" << xce.x << ", " << xce.y << ") " << xce.width << "x" << xce.height;
+      RTC_LOG(LS_INFO) << "HandleXEvent: type=ConfigureNotify"
+          << ", x=" << xce.x << ", y=" << xce.y << ", width=" << xce.width << ", height=" << xce.height;
       if (!DesktopRectFromXAttributes(xce).equals(
               x_server_pixel_buffer_.window_rect())) {
         if (!x_server_pixel_buffer_.Init(&atom_cache_, selected_window_)) {
           RTC_LOG(LS_ERROR)
               << "Failed to initialize pixel buffer after resizing.";
         } else {
-          window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect());
+          window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect()); //+by xxlang@2022-01-25
         }
       }
-    }
-  } else if (event.xany.window == selected_window_) {
-    if (event.type == Expose) {
-      RTC_LOG(LS_INFO) << "HandleXEvent: event=Expose";
-      window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect());
-    } else if (event.type == VisibilityNotify) {
-      RTC_LOG(LS_INFO) << "HandleXEvent: event=Expose";
-      window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect());
-    } else if (event.type == PropertyNotify) {
-      RTC_LOG(LS_INFO) << "HandleXEvent: event=Expose";
-      window_border_->OnScreenRectChanged(x_server_pixel_buffer_.window_rect());
-    } else {
-      RTC_LOG(LS_INFO) << "IgnoreXEvent: event=" << event.type;
     }
   }
 

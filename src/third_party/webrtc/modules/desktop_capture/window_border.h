@@ -20,7 +20,7 @@ class WindowBorder {
   virtual ~WindowBorder() = default;
 
 #if defined(WEBRTC_USE_X11)
-  virtual void Init(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num, bool handle_event) = 0;
+  virtual void Init(rtc::scoped_refptr<SharedXDisplay> x_display, int screen_num) = 0;
 #endif // WEBRTC_USE_X11
   virtual bool CreateForWindow(DesktopCapturer::SourceId source_id) = 0;
   virtual bool CreateForScreen(const DesktopRect &window_rect) = 0;

@@ -25,13 +25,14 @@ namespace {
 // TODO(sergeyu): This code is not thread safe. Fix it. Bug 2202.
 static bool g_xserver_error_trap_enabled = false;
 static int g_last_xserver_error_code = 0;
+static rtc::PlatformThreadId g_last_xserver_error_thread = 0;
 
 int XServerErrorHandler(Display* display, XErrorEvent* error_event) {
 //  RTC_DCHECK(g_xserver_error_trap_enabled);
   if (g_xserver_error_trap_enabled) {
     g_last_xserver_error_code = error_event->error_code;
   } else {
-    RTC_LOG(LS_ERROR) << "XServerErrorHandler(" << display << "): Thread=" << rtc::CurrentThreadId()
+    RTC_LOG(LS_ERROR) << "XServerErrorHandler(" << display << "): Thread=" << rtc::CurrentThreadId() << ", last_thread=" << g_last_xserver_error_thread
         << ", resourceid=" << error_event->resourceid
         << ", request_code=" << int(error_event->request_code)
         << ", error_code=" << int(error_event->error_code);
@@ -45,20 +46,29 @@ int XServerErrorHandler(Display* display, XErrorEvent* error_event) {
 
 XErrorTrap::XErrorTrap(Display* display)
     : original_error_handler_(NULL), enabled_(true) {
-//  RTC_LOG(LS_INFO) << "XErrorTrap(" << display << "): Thread=" << rtc::CurrentThreadId();
-  RTC_DCHECK(!g_xserver_error_trap_enabled);
-  original_error_handler_ = XSetErrorHandler(&XServerErrorHandler);
-  g_xserver_error_trap_enabled = true;
-  g_last_xserver_error_code = 0;
+//  RTC_DCHECK(!g_xserver_error_trap_enabled);
+  if (g_xserver_error_trap_enabled) {
+    RTC_LOG(LS_ERROR) << "XErrorTrap(" << display << "): Thread=" << rtc::CurrentThreadId() << ", last_thread=" << g_last_xserver_error_thread;
+  } else {
+    original_error_handler_ = XSetErrorHandler(&XServerErrorHandler);
+    g_xserver_error_trap_enabled = true;
+    g_last_xserver_error_code = 0;
+    g_last_xserver_error_thread = rtc::CurrentThreadId();
+  }
 }
 
 int XErrorTrap::GetLastErrorAndDisable() {
   enabled_ = false;
-//  RTC_LOG(LS_INFO) << "GetLastErrorAndDisable(): Thread=" << rtc::CurrentThreadId();
-  RTC_DCHECK(g_xserver_error_trap_enabled);
-  XSetErrorHandler(original_error_handler_);
-  g_xserver_error_trap_enabled = false;
-  return g_last_xserver_error_code;
+//  RTC_DCHECK(g_xserver_error_trap_enabled);
+  if (g_xserver_error_trap_enabled) {
+    XSetErrorHandler(original_error_handler_);
+    g_xserver_error_trap_enabled = false;
+    g_last_xserver_error_thread = 0;
+    return g_last_xserver_error_code;
+  } else {
+    RTC_LOG(LS_ERROR) << "GetLastErrorAndDisable(): Thread=" << rtc::CurrentThreadId() << ", last_thread=" << g_last_xserver_error_thread;
+    return 0;
+  }
 }
 
 XErrorTrap::~XErrorTrap() {

@@ -222,9 +222,9 @@ void GetFrameExtents(::Display* display, ::Window window, DesktopRect* rect) {
             (int32_t)*(extents + 1), // [1]right
             (int32_t)*(extents + 3) // [3]bottom
           );
-      RTC_LOG(LS_INFO) << "XGetWindowProperty(_GTK_FRAME_EXTENTS) ok left=" << rect->left() << ", right=" << rect->right() << ", top=" << rect->top() << ", bottom=" << rect->bottom();
+//      RTC_LOG(LS_INFO) << "XGetWindowProperty(_GTK_FRAME_EXTENTS) ok left=" << rect->left() << ", right=" << rect->right() << ", top=" << rect->top() << ", bottom=" << rect->bottom();
     } else {
-      RTC_LOG(LS_ERROR) << "XGetWindowProperty(_GTK_FRAME_EXTENTS) ok but actual_format=" << actual_format << ", nitems=" << nitems << ", bytes_after=" << bytes_after;
+//      RTC_LOG(LS_ERROR) << "XGetWindowProperty(_GTK_FRAME_EXTENTS) ok but actual_format=" << actual_format << ", nitems=" << nitems << ", bytes_after=" << bytes_after;
     }
     XFree(data);
   } else {

@@ -115,7 +115,7 @@ bool ScreenCapturerX11::Init(const DesktopCaptureOptions& options) {
 
   //+by xxlang@2021-12-28 {
   if (enable_border_) {
-    window_border_->Init(options_.x_display(), DefaultScreen(display()), true);
+    window_border_->Init(options_.x_display(), DefaultScreen(display()));
   }
   //+by xxlang@2021-12-28 }
 
@@ -160,7 +160,7 @@ void ScreenCapturerX11::InitXDamage() {
                                         this);
 
   use_damage_ = true;
-  RTC_LOG(LS_INFO) << "Using XDamage extension, event_base=" << damage_event_base_;
+  RTC_LOG(LS_INFO) << "Using XDamage extension.";
 }
 
 RTC_NO_SANITIZE("cfi-icall")
@@ -180,7 +180,7 @@ void ScreenCapturerX11::InitXrandr() {
       if (get_monitors_ && free_monitors_) {
         use_randr_ = true;
         RTC_LOG(LS_INFO) << "Using XRandR extension v" << major_version << '.'
-                         << minor_version << ", event_base="  << randr_event_base_;
+                         << minor_version << '.';
         monitors_ =
             get_monitors_(display(), root_window_, true, &num_monitors_);
 
@@ -212,13 +212,13 @@ void ScreenCapturerX11::UpdateMonitors() {
     if (selected_monitor_name_ == static_cast<Atom>(kFullDesktopScreenId)) {
       RTC_LOG(LS_INFO) << "XRandR desktop rect updated. ("
                       << selected_monitor_rect_.left() << ", "
-                      << selected_monitor_rect_.top() << ", "
-                      << selected_monitor_rect_.right() << ", "
-                      << selected_monitor_rect_.bottom() << ") => ("
+                      << selected_monitor_rect_.top() << ") "
+                      << selected_monitor_rect_.width() << "x"
+                      << selected_monitor_rect_.height() << " => ("
                       << 0 << ", "
-                      << 0 << ", "
-                      << x_server_pixel_buffer_.window_size().width() << ", "
-                      << x_server_pixel_buffer_.window_size().height() << ")";
+                      << 0 << ") "
+                      << x_server_pixel_buffer_.window_size().width() << "x"
+                      << x_server_pixel_buffer_.window_size().height();
       selected_monitor_rect_ =
           DesktopRect::MakeSize(x_server_pixel_buffer_.window_size());
       window_border_->OnScreenRectChanged(selected_monitor_rect_); //+by xxlang@2021-12-28
@@ -230,13 +230,13 @@ void ScreenCapturerX11::UpdateMonitors() {
       if (selected_monitor_name_ == m.name) {
         RTC_LOG(LS_INFO) << "XRandR monitor " << m.name << " rect updated. ("
                       << selected_monitor_rect_.left() << ", "
-                      << selected_monitor_rect_.top() << ", "
-                      << selected_monitor_rect_.right() << ", "
-                      << selected_monitor_rect_.bottom() << ") => ("
+                      << selected_monitor_rect_.top() << ") "
+                      << selected_monitor_rect_.width() << "x"
+                      << selected_monitor_rect_.height() << " => ("
                       << m.x << ", "
-                      << m.y << ", "
-                      << (m.x + m.width) << ", "
-                      << (m.y + m.height) << ")";
+                      << m.y << ") "
+                      << m.width << "x"
+                      << m.height;
         selected_monitor_rect_ =
             DesktopRect::MakeXYWH(m.x, m.y, m.width, m.height);
         window_border_->OnScreenRectChanged(selected_monitor_rect_); //+by xxlang@2021-12-28

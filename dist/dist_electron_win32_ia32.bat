@@ -13,6 +13,7 @@ for /F %%i in ('e show outdir') do set "out_dir=%%i"
 
 cd %root_dir%\src\electron
 call git pull
+copy /b ELECTRON_VERSION+,,
 call e sync
 
 call e build

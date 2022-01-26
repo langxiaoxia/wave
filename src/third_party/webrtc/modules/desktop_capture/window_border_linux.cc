@@ -390,6 +390,8 @@ void WindowBorderLinux::set_shape_bounding() {
     XFixesDestroyRegion(display(), region_border);
     XFixesDestroyRegion(display(), region_out);
     XFixesDestroyRegion(display(), region_in);
+
+    XRaiseWindow(display(), border_window_); // raise here to fix Teams maximize case.
   }
 
   XFlush(display());

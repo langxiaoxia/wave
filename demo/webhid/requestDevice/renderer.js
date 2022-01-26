@@ -10,6 +10,7 @@ let options = {
 //acceptAllDevices:true
 }
 
+let hidTimeoutButton = document.getElementById('hid-timeout-button')
 let hidButton = document.getElementById('hid-button')
 let serialButton = document.getElementById('serial-button')
 let bluetoothButton = document.getElementById('bluetooth-button')
@@ -22,6 +23,20 @@ function sleep(time) {
 	return new Promise((resolve) => setTimeout(resolve, time));
 }
 
+hidTimeoutButton.onclick = async function() {
+	if (!navigator.hid) {
+		console.log('navigator.hid not supported');
+		return;
+	}
+	console.log('navigator.hid supported');
+	setTimeout(async function (){
+		console.log('call asyncListHid');
+    await asyncListHid()
+		console.log('asyncListHid return');
+  }, 5 * 1000)
+	console.log('onclick return');
+}
+
 hidButton.onclick = async function() {
 	if (!navigator.hid) {
 		console.log('navigator.hid not supported');
@@ -31,11 +46,6 @@ hidButton.onclick = async function() {
 	await sleep(5000)
 	console.log('call asyncListHid');
 	asyncListHid()
-//	setTimeout(async function (){
-//    console.warn("≥¨ ±≤‚ ‘")
-//    await asyncListHid()
-//  }, 5 * 1000)
-	
 	console.log('asyncListHid return');
 }
 

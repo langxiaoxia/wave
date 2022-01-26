@@ -12,6 +12,7 @@ out_dir=`e show outdir`
 
 cd $root_dir/src/electron
 git pull
+touch ELECTRON_VERSION
 e sync
 
 e build

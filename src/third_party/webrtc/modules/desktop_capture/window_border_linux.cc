@@ -224,7 +224,7 @@ bool WindowBorderLinux::HandleXEvent(const XEvent &event) {
       XExposeEvent xe = event.xexpose;
       RTC_LOG(LS_INFO) << "HandleXEvent(" << this << "): Thread=" << rtc::CurrentThreadId() << ", type=Expose"
           << ", x=" << xe.x << ", y=" << xe.y << ", width=" << xe.width << ", height=" << xe.height;
-      draw(false);
+      draw(true); // resize here to fix 800x600 => 1920x1080 case.
       break;
     }
 

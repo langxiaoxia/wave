@@ -1,0 +1,17 @@
+git config --global http.proxy "socks5://192.168.121.230:1080"
+git config --global https.proxy "socks5://192.168.121.230:1080"
+
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+
+[Windows]
+cd d:\git\langxiaoxia\wave\dist
+dist_electron_win32_x64.bat & dist_electron_win32_ia32.bat
+
+[Mac]
+cd ~/git/langxiaoxia/wave/dist
+./dist_electron_darwin_arm64 && ./dist_electron_darwin_x64
+
+[Linux]
+cd ~/git/langxiaoxia/wave/dist
+./dist_electron_linux_x64

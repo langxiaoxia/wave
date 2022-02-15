@@ -1,6 +1,14 @@
 #!/bin/sh
 
 export PATH=$HOME/.electron_build_tools/third_party/depot_tools:$PATH
+
+e use dev_arm64
 cd `e show root`/src
 export CHROMIUM_BUILDTOOLS_PATH=`pwd`/buildtools
-gn gen out/arm64 --args="import(\"//electron/build/args/release.gn\") target_cpu=\"arm64\"" --ide=xcode
+gn gen out/arm64_testing --args="import(\"//electron/build/args/testing.gn\") target_cpu=\"arm64\"" --ide=xcode --xcode-project=arm64_testing_all
+
+e use dev_x64
+cd `e show root`/src
+export CHROMIUM_BUILDTOOLS_PATH=`pwd`/buildtools
+gn gen out/x64_testing --args="import(\"//electron/build/args/testing.gn\") target_cpu=\"x64\"" --ide=xcode --xcode-project=x64_testing_all
+

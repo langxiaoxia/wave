@@ -1,34 +1,59 @@
 const { desktopCapturer, remote } = require('electron');
 const { Menu } = remote;
 
-async function startCamera() {
-  // Stop old Stream
-  stopCamera();
+const startCameraBtn = document.querySelector('#startCamera');
+const stopCameraBtn = document.querySelector('#stopCamera');
+const startScreenBtn = document.querySelector('#startScreen');
+const stopScreenBtn = document.querySelector('#stopScreen');
 
-  const constraints = {
+const cameraVideoElement = document.getElementById('cameraVideo');
+const screenVideoElement = document.getElementById('screenVideo');
+
+function onCameraInactive() {
+  console.log("onCameraInactive");
+  startCameraBtn.disabled = false;
+  stopCameraBtn.disabled = true;
+  cameraVideoElement.srcObject = null;
+}
+
+async function startCamera() {
+  const constraints_without_audio = {
     audio: false,
     video: {
-      cursor: "always"
+      cursor: "always",
+      frameRate: 15
     }
   };
 
-  // Create a Stream
-  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  const constraints_with_audio = {
+    audio: true,
+    video: {
+      cursor: "always",
+      frameRate: 15
+    }
+  };
 
-  // Preview the source in a video element
-  const videoElement = document.getElementById('cameraVideo');
-  videoElement.srcObject = stream;
-  videoElement.play();
+  let stream = await navigator.mediaDevices.getUserMedia(constraints_without_audio);
+  if (stream && stream.active) {
+    stream.oninactive = onCameraInactive;
+
+    cameraVideoElement.srcObject = stream;
+    cameraVideoElement.play();
+
+    startCameraBtn.disabled = true;
+    stopCameraBtn.disabled = false;
+  }
 }
 
 async function stopCamera() {
-  const videoElement = document.getElementById('cameraVideo');
-  if (videoElement.srcObject) {
-    let tracks = videoElement.srcObject.getTracks();
+  if (cameraVideoElement.srcObject) {
+    let tracks = cameraVideoElement.srcObject.getTracks();
     if (tracks) {
-      tracks.forEach(track => track.stop());
+      tracks.forEach(track => {
+      	console.log("stop track", track.kind, ":", track.label);
+      	track.stop();
+      });
     }
-    videoElement.srcObject = null;
   }
 }
 
@@ -49,36 +74,75 @@ async function startScreen() {
   videoOptionsMenu.popup();
 }
 
-async function selectSource(source) {
-  // Stop old Stream
-  stopScreen();
+function onScreenInactive(e) {
+  console.log("onScreenInactive", e);
+  startScreenBtn.disabled = false;
+  stopScreenBtn.disabled = true;
+  screenVideoElement.srcObject = null;
+}
 
-  const constraints = {
+async function selectSource(source) {
+  const constraints_without_audio = {
     audio: false,
     video: {
       mandatory: {
         chromeMediaSource: 'desktop',
+        chromeMediaSourceId: source.id,
+        maxFrameRate: 5
+      }
+    }
+  };
+  const constraints_with_audio = {
+    audio: {
+      mandatory: {
+        chromeMediaSource: 'desktop',
         chromeMediaSourceId: source.id
+      }
+    },
+    video: {
+      mandatory: {
+        chromeMediaSource: 'desktop',
+        chromeMediaSourceId: source.id,
+        maxFrameRate: 5
       }
     }
   };
 
   // Create a Stream
-  const stream = await navigator.mediaDevices.getUserMedia(constraints);
+  let stream = await navigator.mediaDevices.getUserMedia(constraints_without_audio);
+  if (stream && stream.active) {
+    stream.oninactive = onScreenInactive;
 
-  // Preview the source in a video element
-  const videoElement = document.getElementById('screenVideo');
-  videoElement.srcObject = stream;
-  videoElement.play();
+    let tracks = stream.getVideoTracks();
+    tracks[0].onended = function() {
+   	  console.log("video track onended");
+   	  stopScreen();
+    }
+
+    tracks[0].onmute = function(e) {
+   	  console.log("video track onmute", e);
+    }
+
+    tracks[0].onunmute = function(e) {
+   	  console.log("video track onunmute", e);
+    }
+
+    screenVideoElement.srcObject = stream;
+    screenVideoElement.play();
+
+    startScreenBtn.disabled = true;
+    stopScreenBtn.disabled = false;
+  }
 }
 
 async function stopScreen() {
-  const videoElement = document.getElementById('screenVideo');
-  if (videoElement.srcObject) {
-    let tracks = videoElement.srcObject.getTracks();
+  if (screenVideoElement.srcObject) {
+    let tracks = screenVideoElement.srcObject.getTracks();
     if (tracks) {
-      tracks.forEach(track => track.stop());
+      tracks.forEach(track => {
+      	console.log("stop track", track.kind, ":", track.label);
+      	track.stop();
+      });
     }
-    videoElement.srcObject = null;
   }
 }

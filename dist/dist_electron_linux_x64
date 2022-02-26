@@ -8,7 +8,7 @@ e use x64
 
 root_dir=`e show root`
 out_name=`e show out`
-out_dir=`e show outdir`
+out_dir=$root_dir/src/out/$out_name
 
 cd $root_dir/src/electron
 git pull

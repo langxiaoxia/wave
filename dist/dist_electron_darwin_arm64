@@ -7,7 +7,8 @@ export https_proxy=http://127.0.0.1:8118
 e use arm64
 
 root_dir=`e show root`
-out_dir=`e show outdir`
+out_name=`e show out`
+out_dir=$root_dir/src/out/$out_name
 
 cd $root_dir/src/electron
 git pull

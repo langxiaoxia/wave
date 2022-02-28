@@ -9,7 +9,8 @@ set https_proxy=http://127.0.0.1:8118
 call e use x86
 
 for /F %%i in ('e show root') do set "root_dir=%%i"
-for /F %%i in ('e show outdir') do set "out_dir=%%i"
+for /F %%i in ('e show out') do set "out_name=%%i"
+set out_dir=%root_dir%\src\out\%out_name%
 
 cd %root_dir%\src\electron
 call git pull

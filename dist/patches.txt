@@ -1,0 +1,13 @@
+Auto use short_rev@build_date as electron build tag.
+Add support webhid.
+Fix webhid timeout. 
+Add containerId for hid.requestDevice() and mediaDevices.enumerateDevices().
+Add RNNoise for noise suppression.
+Add webrtc rnn_ns.
+Add rnnNoiseSuppression for capabilities.
+Add border for screen/window share.
+Enable border for screen/window share.
+Fix border for native window share on Windows/macOS.
+Add WPS full screen handler on Windows/macOS.
+Fix PowerPoint full screen handler on Windows.
+Fix share DingTalk and WPS Office appear black screen.

@@ -1,16 +1,16 @@
 const {ipcRenderer} = require('electron')
 
-const gsDeviceFilters = [{ vendorId: 0x2BAB }];
+const hidAll = [{ }];
+const hidOne = [{ vendorId: 0x2BAB }];
 
-let options = {
+const bluetoothAll = { acceptAllDevices: true };
+const bluetoothOne = {
   filters: [
 //    {name: 'EDIFIER BLE'},
-    {namePrefix: 'EDIFIER'}
+    {namePrefix: 'Jabra'}
   ]
-//acceptAllDevices:true
-}
+};
 
-let hidTimeoutButton = document.getElementById('hid-timeout-button')
 let hidButton = document.getElementById('hid-button')
 let serialButton = document.getElementById('serial-button')
 let bluetoothButton = document.getElementById('bluetooth-button')
@@ -19,34 +19,27 @@ let hidDevice = null
 let serialPort = null
 let bluetoothDevice = null
 
-function sleep(time) {
-	return new Promise((resolve) => setTimeout(resolve, time));
-}
-
-hidTimeoutButton.onclick = async function() {
-	if (!navigator.hid) {
-		console.log('navigator.hid not supported');
-		return;
-	}
-	console.log('navigator.hid supported');
-	setTimeout(async function (){
-		console.log('call asyncListHid');
-    await asyncListHid()
-		console.log('asyncListHid return');
-  }, 5 * 1000)
-	console.log('onclick return');
-}
-
 hidButton.onclick = async function() {
 	if (!navigator.hid) {
 		console.log('navigator.hid not supported');
 		return;
 	}
 	console.log('navigator.hid supported');
-	await sleep(5000)
-	console.log('call asyncListHid');
-	asyncListHid()
-	console.log('asyncListHid return');
+
+	const delayFlag = document.querySelector('#delayFlag').checked;
+	if (delayFlag) {
+		setTimeout(async function () {
+			console.log('call asyncListHid');
+	    await asyncListHid()
+			console.log('asyncListHid return');
+	  }, 5 * 1000);
+	} else {
+			console.log('call asyncListHid');
+	    await asyncListHid()
+			console.log('asyncListHid return');
+	}
+
+	console.log('onclick return');
 }
 
 serialButton.onclick = async function() {
@@ -55,10 +48,21 @@ serialButton.onclick = async function() {
 		return;
 	}
 	console.log('navigator.serial supported');
-	await sleep(5000)
-	console.log('call asyncListSerial');
-	asyncListSerial()
-	console.log('asyncListSerial return');
+
+	const delayFlag = document.querySelector('#delayFlag').checked;
+	if (delayFlag) {
+		setTimeout(async function () {
+			console.log('call asyncListSerial');
+	    await asyncListSerial()
+			console.log('asyncListSerial return');
+	  }, 5 * 1000);
+	} else {
+			console.log('call asyncListSerial');
+	    await asyncListSerial()
+			console.log('asyncListSerial return');
+	}
+
+	console.log('onclick return');
 }
 
 bluetoothButton.onclick = async function() {
@@ -67,16 +71,26 @@ bluetoothButton.onclick = async function() {
 		return;
 	}
 	console.log('navigator.bluetooth supported');
-	await sleep(5000)
-	console.log('call asyncListBluetooth');
-	asyncListBluetooth()
-	console.log('asyncListBluetooth return');
+
+	const delayFlag = document.querySelector('#delayFlag').checked;
+	if (delayFlag) {
+		setTimeout(async function () {
+			console.log('call asyncListBluetooth');
+	    await asyncListBluetooth()
+			console.log('asyncListBluetooth return');
+	  }, 5 * 1000);
+	} else {
+			console.log('call asyncListBluetooth');
+	    await asyncListBluetooth()
+			console.log('asyncListBluetooth return');
+	}
+
+	console.log('onclick return');
 }
 
 async function asyncListHid() {
-	// Show a device chooser dialog. The vendor ID filter matches GrandStream GUV30xx devices.
 	try {
-		hidDevice = await navigator.hid.requestDevice({ filters: gsDeviceFilters });
+		hidDevice = await navigator.hid.requestDevice({ filters: hidAll });
 		if (!hidDevice) {
 			console.log('hidDevice is null');
 			return;
@@ -104,7 +118,7 @@ async function asyncListSerial() {
 
 async function asyncListBluetooth() {
 	try {
-		bluetoothDevice = await navigator.bluetooth.requestDevice(options);
+		bluetoothDevice = await navigator.bluetooth.requestDevice(bluetoothOne);
 		if (!bluetoothDevice) {
 			console.log('bluetoothDevice is null');
 			return;

@@ -1,0 +1,23 @@
+{
+  "goma": "none",
+  "root": "/Users/langxiaoxia/electron/v13.1.4",
+  "remotes": {
+    "electron": {
+      "origin": "https://github.com/langxiaoxia/electron.git"
+    },
+    "node": {
+      "origin": "https://github.com/electron/node.git"
+    }
+  },
+  "gen": {
+    "args": [
+      "import(\"//electron/build/args/release.gn\")",
+      "target_cpu=\"x64\""
+    ],
+    "out": "x64"
+  },
+  "env": {
+    "CHROMIUM_BUILDTOOLS_PATH": "/Users/langxiaoxia/electron/v13.1.4/src/buildtools",
+    "GIT_CACHE_PATH": "/Users/langxiaoxia/.git_cache"
+  }
+}

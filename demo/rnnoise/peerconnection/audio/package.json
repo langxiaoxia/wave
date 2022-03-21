@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
     "start-log": "electron . --enable-logging --v=0",
-    "start-v": "electron . --enable-logging --vmodule=*/webrtc/*=1",
-    "start": "electron ."
+    "start-logm": "electron . --enable-logging --vmodule=*/webrtc/*=1"
   },
   "keywords": [],
   "author": "xxlang",

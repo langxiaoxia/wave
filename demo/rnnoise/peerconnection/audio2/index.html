@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<!--
+ *  Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+-->
+<html>
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'">
+    <meta name="description" content="WebRTC code samples">
+    <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+    <meta itemprop="description" content="Client-side WebRTC code samples">
+    <meta itemprop="image" content="../../../images/webrtc-icon-192x192.png">
+    <meta itemprop="name" content="WebRTC code samples">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta id="theme-color" name="theme-color" content="#ffffff">
+
+    <base target="_blank">
+
+    <title>RNNoise</title>
+
+    <link rel="icon" sizes="192x192" href="../../../images/webrtc-icon-192x192.png">
+    <link rel="stylesheet" href="../../../css/main.css"/>
+    <link rel="stylesheet" href="css/main.css"/>
+
+</head>
+
+<body>
+    <h1>RNNoise</h1>
+    We are using Node.js <span id="node-version"></span>,
+    Chromium <span id="chrome-version"></span>,
+    and Electron <span id="electron-version"></span>.<hr>
+
+<div id="container">
+    <div id="meters">
+        <div id="instant">
+            <div class="label">Instant:</div>
+            <meter high="0.25" max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+        <div id="slow">
+            <div class="label">Slow:</div>
+            <meter high="0.25" max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+        <div id="clip">
+            <div class="label">Clip:</div>
+            <meter max="1" value="0"></meter>
+            <div class="value"></div>
+        </div>
+    </div>
+
+    <div id="audio">
+        <select id="audioSource"></select>
+        <div>
+            <div class="label">Local audio 0:</div>
+            <button id="startButton0">Start</button>
+            <button id="stopButton0" disabled>Stop</button>
+            <button id="muteButton0" disabled>Mute</button>
+            <audio id="audio0" autoplay controls muted></audio>
+        </div>
+        <div>
+            <div class="label">Local audio:</div>
+            <button id="startButton">Start</button>
+            <button id="stopButton" disabled>Stop</button>
+            <button id="muteButton" disabled>Mute</button>
+            <audio id="audio1" autoplay controls muted></audio>
+        </div>
+        <div>
+            <div class="label">Remote audio:</div>
+            <audio id="audio2" autoplay controls></audio>
+        </div>
+    </div>
+
+    <div id="buttons">
+	      <div>
+	          <h4>Media Stream Constraints options</h4>
+	          <p>Noise Suppression: <input type="checkbox" id="noiseSuppression"></p>
+	          <p>Rnn Noise Suppression: <input type="checkbox" id="rnnNoiseSuppression"></p>
+	      </div>
+
+        <select id="codec">
+            <!-- Codec values are matched with how they appear in the SDP.
+            For instance, opus matches opus/48000/2 in Chrome, and ISAC/16000
+            matches 16K iSAC (but not 32K iSAC). -->
+            <option value="opus">Opus</option>
+            <option value="ISAC">iSAC 16K</option>
+            <option value="G722">G722</option>
+            <option value="PCMU">PCMU</option>
+            <option value="red">RED</option>
+        </select>
+
+        <select id="codecPreferences" disabled>
+            <option selected value="">Default</option>
+        </select>
+
+        <button id="callButton">Call</button>
+        <button id="hangupButton" disabled>Hang Up</button>
+    </div>
+
+    <div class="graph-container" id="bitrateGraph">
+        <div>Bitrate</div>
+        <canvas id="bitrateCanvas"></canvas>
+    </div>
+
+    <div class="graph-container" id="packetGraph">
+        <div>Packets sent per second</div>
+        <canvas id="packetCanvas"></canvas>
+    </div>
+
+    <div class="graph-container" id="audioLevelGraph">
+        <div>average audio level ([0..1])</div>
+        <canvas id="audioLevelCanvas"></canvas>
+    </div>
+
+    <a href="https://github.com/webrtc/samples/tree/gh-pages/src/content/peerconnection/audio"
+       title="View source for this page on GitHub" id="viewSource">View source on GitHub</a>
+</div>
+<table>
+    <caption>Bitrate and Packes sent per second - approximate results in browsers</caption>
+    <tr>
+        <th>Opus</th>
+        <th>iSAC 16K</th>
+        <th>G722</th>
+        <th>PCMU</th>
+        <th>Browsers Tested</th>
+    </tr>
+    <tr>
+        <td>~40 kbps / Muted : Same, ~50 Packets, Muted : Same or slight drop</td>
+        <td>~30 kbps / Muted : Same, ~33 Packets, Muted : Same or slight drop</td>
+        <td>~70 kbps / Muted : Same, ~50 Packets, Muted : Same</td>
+        <td>~70 kbps / Muted : Same, ~55 Packets, Muted : Same</td>
+        <td>Tested in Chrome, Not tested in Opera, Firefox, Safari, Edge</td>
+    </tr>
+</table>
+
+<script src="js/soundmeter.js"></script>
+<script src="js/main.js"></script>
+<script src="../../../js/third_party/graph.js"></script>
+
+</body>
+</html>

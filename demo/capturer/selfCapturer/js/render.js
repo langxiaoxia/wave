@@ -21,7 +21,7 @@ async function startCamera() {
     audio: false,
     video: {
       cursor: "always",
-      frameRate: 15
+      frameRate: 30
     }
   };
 
@@ -29,13 +29,26 @@ async function startCamera() {
     audio: true,
     video: {
       cursor: "always",
-      frameRate: 15
+      frameRate: 30
     }
   };
 
   let stream = await navigator.mediaDevices.getUserMedia(constraints_without_audio);
   if (stream && stream.active) {
     stream.oninactive = onCameraInactive;
+
+    let tracks = stream.getVideoTracks();
+    tracks[0].onended = function() {
+      console.log("video track onended");
+    }
+
+    tracks[0].onmute = function(e) {
+      console.log("video track onmute", e);
+    }
+
+    tracks[0].onunmute = function(e) {
+      console.log("video track onunmute", e);
+    }
 
     cameraVideoElement.srcObject = stream;
     cameraVideoElement.play();
@@ -77,6 +90,7 @@ async function startScreen() {
 function onScreenInactive(e) {
   console.log("onScreenInactive", e);
   startScreenBtn.disabled = false;
+  startScreenBtn.innerText = "StartScreen";
   stopScreenBtn.disabled = true;
   screenVideoElement.srcObject = null;
 }
@@ -88,7 +102,7 @@ async function selectSource(source) {
       mandatory: {
         chromeMediaSource: 'desktop',
         chromeMediaSourceId: source.id,
-        maxFrameRate: 5
+        maxFrameRate: 30
       }
     }
   };
@@ -103,7 +117,7 @@ async function selectSource(source) {
       mandatory: {
         chromeMediaSource: 'desktop',
         chromeMediaSourceId: source.id,
-        maxFrameRate: 5
+        maxFrameRate: 30
       }
     }
   };
@@ -115,22 +129,22 @@ async function selectSource(source) {
 
     let tracks = stream.getVideoTracks();
     tracks[0].onended = function() {
-   	  console.log("video track onended");
-   	  stopScreen();
+      console.log("video track onended");
     }
 
     tracks[0].onmute = function(e) {
-   	  console.log("video track onmute", e);
+      console.log("video track onmute", e);
     }
 
     tracks[0].onunmute = function(e) {
-   	  console.log("video track onunmute", e);
+      console.log("video track onunmute", e);
     }
 
     screenVideoElement.srcObject = stream;
     screenVideoElement.play();
 
     startScreenBtn.disabled = true;
+    startScreenBtn.innerText = source.id;
     stopScreenBtn.disabled = false;
   }
 }

@@ -1,4 +1,0 @@
-@echo off
-set GOOGLE_API_KEY=AIzaSyDdR1EWiAJNfhYVIzvekMb3LjNTg2p-sVc
-set GOOGLE_DEFAULT_CLIENT_ID=197676925649-255aa3p5cr4u6i03c18mjv6nd70nc6un.apps.googleusercontent.com
-set GOOGLE_DEFAULT_CLIENT_SECRET=doZGvwaFUjevC-zg2j7KKOfG

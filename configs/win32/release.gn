@@ -1,0 +1,7 @@
+proprietary_codecs = true
+ffmpeg_branding = "Chrome"
+is_official_build = true
+is_component_build = false
+is_component_ffmpeg = true
+rtc_use_h264 = true
+chrome_pgo_phase = 0

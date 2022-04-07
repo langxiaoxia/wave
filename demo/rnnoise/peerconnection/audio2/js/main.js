@@ -15,6 +15,7 @@ const slowMeter = document.querySelector('#slow meter');
 const clipMeter = document.querySelector('#clip meter');
 
 const audioInputSelect = document.querySelector('select#audioSource');
+const audioOutputSelect = document.querySelector('select#audioOutput');
 
 const instantValueDisplay = document.querySelector('#instant .value');
 const slowValueDisplay = document.querySelector('#slow .value');
@@ -135,6 +136,8 @@ function gotDevicesSuccess(deviceInfos) {
       option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
       audioInputSelect.appendChild(option);
     } else if (deviceInfo.kind === 'audiooutput') {
+      option.text = deviceInfo.label || `speaker ${audioOutputSelect.length + 1}`;
+      audioOutputSelect.appendChild(option);
     } else if (deviceInfo.kind === 'videoinput') {
     } else {
       console.log('Some other kind of source/device: ', deviceInfo);

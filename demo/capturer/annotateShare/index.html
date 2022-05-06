@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>Annotation Capturer</title>
+	<link rel="stylesheet" href="css/index1.css"/>
+	<link rel="stylesheet" href="css/index2.css"/>
+	<script defer src="render.js"></script>
+</head>
+<body>
+<div align="center">
+	<h1>Annotation Capturer</h1>
+	<section>
+	<div>
+		We are using Node.js <span id="node-version"></span>,
+		Chromium <span id="chrome-version"></span>,
+		and Electron <span id="electron-version"></span>.
+	</div>
+	</section>
+
+	<div>
+		<button id="startCamera" onclick="startCamera()">StartCamera</button>
+		<button id="stopCamera" onclick="stopCamera()" disabled=true>StopCamera</button>
+		<button id="takePhoto" onclick="takePhoto()">TakePhoto</button>
+	</div>
+	<div>
+		<button id="listShare" onclick="listShare()">ListShare</button>
+		<button id="startScreen" onclick="startScreen()">StartScreen</button>
+		<button id="stopScreen" onclick="stopScreen()" disabled=true>StopScreen</button>
+		<button id="grabFrame" onclick="grabFrame()">GrabFrame</button>
+	</div>
+
+	<section id="video">
+	<div>
+		<h2>Camera Video</h2>
+		<video id="cameraVideo"></video>
+	</div>
+
+	<div>
+		<h2>Screen Video</h2>
+		<video id="screenVideo"></video>
+	</div>
+	</section>
+
+	<div><img id="imageClip"/></div>
+
+	<div id="thumbList"/>
+</div>
+</body>
+</html>

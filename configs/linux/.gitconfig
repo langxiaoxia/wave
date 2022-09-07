@@ -1,0 +1,19 @@
+[user]
+	name = Xiaoxia Lang
+	email = xxlang@grandstream.cn
+[core]
+	autocrlf = false
+	filemode = false
+	packedGitLimit = 512m
+	packedGitWindowSize = 512m
+[branch]
+	autosetuprebase = always
+[http]
+	postBuffer = 512m
+	proxy = socks5://192.168.121.230:1080
+[pack] 
+	deltaCacheSize = 2048m 
+	packSizeLimit = 2048m 
+	windowMemory = 2048m
+[https]
+	proxy = socks5://192.168.121.230:1080

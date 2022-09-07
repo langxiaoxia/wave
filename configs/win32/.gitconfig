@@ -1,0 +1,19 @@
+[user]
+	name = Xiaoxia Lang
+	email = xxlang@grandstream.cn
+[core]
+	autocrlf = false
+	filemode = false
+[branch]
+	autosetuprebase = always
+[http]
+	version = HTTP/1.1
+	proxy = socks5://192.168.121.230:1080
+[https]
+	proxy = socks5://192.168.121.230:1080
+[diff]
+	renameLimit = 9999
+[gui]
+	encoding = utf-8
+[commit]
+	template = E:/config/git/CommitTemplate

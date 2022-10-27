@@ -1,6 +1,11 @@
 #!/bin/sh
 
 export PATH=$HOME/.electron_build_tools/third_party/depot_tools:$PATH
+
 cd `e show root`/src
 export CHROMIUM_BUILDTOOLS_PATH=`pwd`/buildtools
-gn gen out/x64 --args="import(\"//electron/build/args/release.gn\") target_cpu=\"x64\"" --ide=eclipse
+
+config_name=`e show current`
+out_name=`e show out`
+gn gen out/$out_name --args="import(\"//electron/build/args/release.gn\") target_cpu=\"x64\"" --ide=eclipse
+

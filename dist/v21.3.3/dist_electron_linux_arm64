@@ -17,7 +17,9 @@ git pull
 e sync
 
 cd $root_dir/src
-electron/script/remove-binaries.py -d out/$out_name
+
+rm -f $out_dir/gen/electron/electron_version.args
+rm -f $out_dir/gen/electron/electron_version.h
 e build
 
 rm -fr out/$out_name/debug

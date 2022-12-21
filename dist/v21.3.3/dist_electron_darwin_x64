@@ -17,6 +17,8 @@ cd $root_dir/src/electron
 git pull
 e sync
 
+rm -f $out_dir/gen/electron/electron_version.args
+rm -f $out_dir/gen/electron/electron_version.h
 e build
 
 rm -f $out_dir/dist.zip

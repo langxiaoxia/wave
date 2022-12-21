@@ -18,6 +18,8 @@ cd %root_dir%\src\electron
 call git pull
 call e sync
 
+del %out_dir%\gen\electron\electron_version.args
+del %out_dir%\gen\electron\electron_version.h
 call e build
 
 del %out_dir%\dist.zip

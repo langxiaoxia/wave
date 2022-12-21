@@ -6,7 +6,7 @@ export https_proxy=http://127.0.0.1:8118
 
 build_tag=v21.3.3
 
-e use arm64
+e use v21_arm64
 
 root_dir=`e show root`
 out_name=`e show out`

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Remote Capturer</title>
+  <link rel="stylesheet" href="index1.css" />
+  <link rel="stylesheet" href="index2.css" />
+  <script defer src="renderer.js"></script>
+</head>
+
+<body>
+  <div align="center">
+    <h1>Remote Capturer</h1>
+    <section>
+      <div>
+        We are using Node.js <span id="node-version"></span>,
+        Chromium <span id="chrome-version"></span>,
+        and Electron <span id="electron-version"></span>.
+      </div>
+    </section>
+
+    <div>
+      <button id="listSource" onclick="listSource()">ListSource</button>
+      <button id="startScreen" onclick="startScreen()">StartScreen</button>
+      <button id="stopScreen" onclick="stopScreen()" disabled=true>StopScreen</button>
+    </div>
+
+    <section>
+      <div>
+        <h2>Screen Video</h2>
+        <video id="screenVideo"></video>
+      </div>
+    </section>
+  </div>
+</body>
+
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "remote_capturer",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "xxlang",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron/remote": "^2.0.8",
+    "electron": "21.3.3"
+  }
+}

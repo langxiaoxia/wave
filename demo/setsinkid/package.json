@@ -1,0 +1,16 @@
+{
+  "name": "setsinkid",
+  "productName": "setsinkid",
+  "description": "My Electron application description",
+  "keywords": [],
+  "main": "./main.js",
+  "version": "1.0.0",
+  "author": "xxlang",
+  "scripts": {
+    "start": "electron ."
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "electron": "21.3.3"
+  }
+}

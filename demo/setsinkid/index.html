@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<!--
+ *  Copyright (c) 2015 The WebRTC project authors. All Rights Reserved.
+ *
+ *  Use of this source code is governed by a BSD-style license
+ *  that can be found in the LICENSE file in the root of the source
+ *  tree.
+-->
+<html>
+
+<head>
+
+  <meta charset="utf-8">
+  <meta name="description" content="WebRTC code samples">
+  <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+  <meta itemprop="description" content="Client-side WebRTC code samples">
+  <meta itemprop="name" content="WebRTC code samples">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta id="theme-color" name="theme-color" content="#ffffff">
+
+  <base target="_blank">
+
+  <title>Select audio and video sources</title>
+
+  <style>
+    div.select {
+      display: inline-block;
+      margin: 0 0 1em 0;
+    }
+
+    p.small {
+      font-size: 0.7em;
+    }
+
+    label {
+      width: 12em;
+      display: inline-block;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="container">
+    <div>
+      We are using Node.js <span id="node-version"></span>,
+      Chromium <span id="chrome-version"></span>,
+      and Electron <span id="electron-version"></span>.
+    </div>
+    <br>
+
+    <div class="select">
+      <label for="audioSource">Audio input source: </label><select id="audioSource"></select>
+    </div>
+
+    <div class="select">
+      <label for="audioOutput">Audio output destination: </label><select id="audioOutput"></select>
+    </div>
+
+    <div class="button">
+      <label for="videoSource">start ringback tone: </label><button onclick='playRingingBackTone()'>start</button>
+    </div>
+    <div class="button">
+      <label for="videoSource">stop ringback tone: </label><button onclick='pauseRingingBackTone()'>stop</button>
+    </div>
+  </div>
+
+  <script>
+    // const audioElement = document.querySelector('audio');
+    const audioInputSelect = document.querySelector('select#audioSource');
+    const audioOutputSelect = document.querySelector('select#audioOutput');
+    const selectors = [audioInputSelect, audioOutputSelect];
+
+    audioOutputSelect.disabled = !('sinkId' in HTMLMediaElement.prototype);
+
+    function gotDevices(deviceInfos) {
+      // Handles being called several times to update labels. Preserve values.
+      const values = selectors.map(select => select.value);
+      selectors.forEach(select => {
+        while (select.firstChild) {
+          select.removeChild(select.firstChild);
+        }
+      });
+      for (let i = 0; i !== deviceInfos.length; ++i) {
+        const deviceInfo = deviceInfos[i];
+        const option = document.createElement('option');
+        option.value = deviceInfo.deviceId;
+        if (deviceInfo.kind === 'audioinput') {
+          option.text = deviceInfo.label || `microphone ${audioInputSelect.length + 1}`;
+          audioInputSelect.appendChild(option);
+        } else if (deviceInfo.kind === 'audiooutput') {
+          console.log('audiooutput: ', deviceInfo);
+          option.text = deviceInfo.label || `speaker ${audioOutputSelect.length + 1}`;
+          audioOutputSelect.appendChild(option);
+        } else {
+          console.log('device: ', deviceInfo);
+        }
+      }
+      const option = document.createElement('option');
+      option.value = 'silent';
+      option.text = 'none (silent output)';
+      audioOutputSelect.appendChild(option);
+      selectors.forEach((select, selectorIndex) => {
+        if (Array.prototype.slice.call(select.childNodes).some(n => n.value === values[selectorIndex])) {
+          select.value = values[selectorIndex];
+        }
+      });
+    }
+
+    navigator.mediaDevices.enumerateDevices().then(gotDevices).catch(handleError);
+
+    function changeAudioDestination() {
+      const audioDestination = audioOutputSelect.value
+      console.log('changeAudioDestination:' + audioDestination)
+    }
+
+    function handleError(error) {
+      console.log('navigator.MediaDevices.getUserMedia error: ', error.message, error.name);
+    }
+
+    audioOutputSelect.onchange = changeAudioDestination;
+
+  </script>
+
+  <script>
+    // 该代码参考：http://outputchannel.com/post/recreating-phone-sounds-web-audio/
+    function Tone(
+      context,
+      freq1,
+      freq2
+    ) {
+      if (typeof context.setSinkId !== 'function' ||
+        typeof context.sinkId != 'string') {
+        console.log('This browser does not support AudioContext.setSinkId()');
+        this.use_sink = false
+      } else {
+        this.use_sink = true
+      }
+
+      this.context = context
+      this.status = 0
+      this.freq1 = freq1
+      this.freq2 = freq2
+      this.ringerLFOBuffer = null
+
+      this.filter = this.context.createBiquadFilter()
+      this.filter.type = 'lowpass'
+      this.filter.frequency = 8000
+
+      this.createRingerLFO()
+    }
+    Tone.prototype.setup = function () {
+      this.osc1 = this.context.createOscillator()
+      this.osc2 = this.context.createOscillator()
+      this.osc1.frequency.value = this.freq1
+      this.osc2.frequency.value = this.freq2
+
+      this.gainNode = this.context.createGain()
+      this.gainNode.gain.value = 0
+
+      this.osc1.connect(this.gainNode)
+      this.osc2.connect(this.gainNode)
+
+      // set our gain node to 0, because the LFO is calibrated to this level
+      this.gainNode.gain.value = 0
+
+      this.createRingerLFO()
+      this.ringerLFOSource = this.context.createBufferSource()
+      this.ringerLFOSource.buffer = this.ringerLFOBuffer
+      this.ringerLFOSource.loop = true
+      // connect the ringerLFOSource to the gain Node audio param
+      this.ringerLFOSource.connect(this.gainNode.gain)
+    }
+    Tone.prototype.setSinkId = function (sinkId) {
+      if (!this.use_sink) {
+        console.log('This browser does not support AudioContext.setSinkId()');
+        return;
+      }
+      console.log('AudioContext setSinkId from "' + this.context.sinkId + '" to "' + sinkId + '"')
+      if (sinkId === 'default') {
+        this.context.setSinkId('');
+      } else if (sinkId === 'silent') {
+        this.context.setSinkId({ type: 'none' });
+      } else {
+        this.context.setSinkId(sinkId);
+      }
+    }
+    Tone.prototype.start = function () {
+      this.osc1.start(0)
+      this.osc2.start(0)
+      this.ringerLFOSource.start(0)
+      this.status = 1
+    }
+    Tone.prototype.stop = function () {
+      this.osc1.stop(0)
+      this.osc2.stop(0)
+      this.ringerLFOSource.stop(0)
+      this.status = 0
+    }
+    Tone.prototype.createRingerLFO = function () {
+      if (!this.ringerLFOBuffer) {
+        // it has a pattern or "cadence" of 2s on, 1.5s off. The total length of this cycle is 3.5 seconds
+        // Create an empty 3.5 second mono buffer at the
+        // sample rate of the AudioContext
+        let channels = 1
+        let sampleRate = this.context.sampleRate // this.context.sampleRate is 48000
+        console.log('sampleRate=' + sampleRate)
+        let frameCount = sampleRate * 3.5
+        let arrayBuffer = this.context.createBuffer(channels, frameCount, sampleRate)
+
+        // getChannelData allows us to access and edit the buffer data and change.
+        let bufferData = arrayBuffer.getChannelData(0)
+        for (let i = 0; i < sampleRate * 2; i++) {
+          // if the sample lies between 0 and 2 seconds, we want it to be on.
+          bufferData[i] = 0.25
+        }
+        this.ringerLFOBuffer = arrayBuffer
+      }
+    }
+    Tone.prototype.startRinging = function () {
+      this.setup()
+      this.start()
+
+      if (use_filter) {
+        this.gainNode.connect(this.filter).connect(this.context.destination)
+      } else {
+        this.gainNode.connect(this.context.destination)
+      }
+    }
+    Tone.prototype.stopRinging = function () {
+      this.stop()
+      this.gainNode.disconnect()
+      this.filter.disconnect()
+    }
+    // polyfill
+    const use_filter = true
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    const ringBackToneAudioContext = new AudioContext({ latencyHint: 0.5 })
+    const ringBackTone = new Tone(ringBackToneAudioContext, 440, 480)
+
+    function playRingingBackTone() {
+      if (ringBackTone.status === 0) {
+        ringBackTone.setSinkId(audioOutputSelect.value)
+        console.log('startRinging')
+        ringBackTone.startRinging()
+      }
+    }
+    function pauseRingingBackTone() {
+      if (ringBackTone.status === 1) {
+        console.log('stopRinging')
+        ringBackTone.stopRinging()
+      }
+    }
+  </script>
+</body>
+
+</html>

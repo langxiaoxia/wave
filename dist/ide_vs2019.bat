@@ -2,6 +2,8 @@
 
 setlocal
 
+set PATH=%USERPROFILE%\.electron_build_tools\third_party\depot_tools;%PATH%
+
 for /F %%i in ('e show root') do set "root_dir=%%i"
 cd %root_dir%\src
 set CHROMIUM_BUILDTOOLS_PATH=%cd%\buildtools

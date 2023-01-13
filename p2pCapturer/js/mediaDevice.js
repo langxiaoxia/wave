@@ -17,7 +17,7 @@
     root.MediaDevice = factory()
   }
 }(this, function () {
-  function MediaDevice () {
+  function MediaDevice() {
     this.deviceCheckTimer = null
   }
 
@@ -305,7 +305,7 @@
          * @param deviceInfoList
          * @param storageInfoList
          */
-    function setDeviceStatus (deviceInfoList, storageInfoList) {
+    function setDeviceStatus(deviceInfoList, storageInfoList) {
       for (var i = 0; i < storageInfoList.length; i++) {
         for (var j = 0; j < deviceInfoList.length; j++) {
           if (storageInfoList[i].label === deviceInfoList[j].label) {
@@ -330,7 +330,7 @@
          * @param deviceInfoList
          * @param storageInfoList
          */
-    function addInsertDevice (deviceInfoList, storageInfoList) {
+    function addInsertDevice(deviceInfoList, storageInfoList) {
       for (var i = 0; i < deviceInfoList.length; i++) {
         for (var j = 0; j < storageInfoList.length; j++) {
           if (deviceInfoList[i].label === storageInfoList[j].label) {
@@ -408,13 +408,13 @@
         }
       }
 
-      function onGetUserMediaSuccess (stream) {
+      function onGetUserMediaSuccess(stream) {
         log.log('constraints keyWords support')
         result = true
         This.closeStream(stream)
       }
 
-      function onGetUserMediaFailed (error) {
+      function onGetUserMediaFailed(error) {
         console.error(error)
         log.log('ideal is not support' + error.message)
         result = false
@@ -444,7 +444,7 @@
     var localStream
     var constraints
 
-    function onGetUserMediaSuccess (stream) {
+    function onGetUserMediaSuccess(stream) {
       // log.info('applyConstraints success' + JSON.stringify(constraints, null, '    '))
       log.info('get Stream Success : ' + quickScanList[i].width + ' x ' + quickScanList[i].height + 'px, ' + 'frameRate: ' + quickScanList[i].frameRate)
       if (stream) {
@@ -464,14 +464,14 @@
       }
     }
 
-    function onGetUserMediaFailed (error) {
+    function onGetUserMediaFailed(error) {
       if (error.name === 'ConstraintNotSatisfiedError') {
         log.info('The resolution ' + quickScanList[i].width + 'x' +
-                    quickScanList[i].height + ' px and frameRate with ' + quickScanList[i].frameRate + ' is not supported by your device.')
+          quickScanList[i].height + ' px and frameRate with ' + quickScanList[i].frameRate + ' is not supported by your device.')
       } else if (error.name === 'PermissionDeniedError') {
         log.info('Permissions have not been granted to use your camera and ' +
-                    'microphone, you need to allow the page access to your devices in ' +
-                    'order for the demo to work.')
+          'microphone, you need to allow the page access to your devices in ' +
+          'order for the demo to work.')
       }
       // log.error('getUserMedia error: ' + error.name, error);
       log.log('fail: mismatch : ' + quickScanList[i].width + ' x ' + quickScanList[i].height + 'px, ' + 'frameRate: ' + quickScanList[i].frameRate)
@@ -557,7 +557,7 @@
     var quickScanList = This.getQuickScanList()
     log.log('Video onloadedmetadata call~~~')
 
-    function captureResults (data) {
+    function captureResults(data) {
       if (data.result === true) {
         log.log('pass')
         capability.push({
@@ -639,7 +639,7 @@
     }
     window.isScanCameraChange = false
 
-    function onGetUserMediaSuccess (stream) {
+    function onGetUserMediaSuccess(stream) {
       log.log('applyConstraints success' + JSON.stringify(constraints, null, '    '))
       log.log('Display size for ' + quickScanList[i].label + ': ' + quickScanList[i].width + 'x' + quickScanList[i].height)
 
@@ -653,7 +653,7 @@
       }, 2000)
     }
 
-    function onGetUserMediaFailed (error) {
+    function onGetUserMediaFailed(error) {
       log.warn('applyConstraints error: ', error.name)
     }
 
@@ -727,7 +727,7 @@
 
     This.enumDevices(function (deviceInfo) {
       // log.log("get device info success: \n", JSON.stringify(deviceInfo))
-      function setLabel (devices, type) {
+      function setLabel(devices, type) {
         for (var key = 0; key < devices.length; key++) {
           if (!devices[key].label) {
             devices[key].label = type + key
@@ -861,7 +861,7 @@
   }
 
   MediaDevice.getBrowserDetail = function () {
-    function extractVersion (uastring, expr, pos) {
+    function extractVersion(uastring, expr, pos) {
       let match = uastring.match(expr)
       return match && match.length >= pos && parseInt(match[pos], 10)
     }
@@ -944,8 +944,8 @@
     let result = false
     let browserDetail = MediaDevice.getBrowserDetail()
     if ((browserDetail.browser === 'chrome' && navigator.userAgent.indexOf('Edg') > 0 && browserDetail.version >= 79) || // chrome 内核Edge
-            (browserDetail.browser === 'chrome' && navigator.userAgent.indexOf('Edg') < 0 && browserDetail.version >= 74) ||
-            browserDetail.browser === 'opera' && browserDetail.version >= 74) {
+      (browserDetail.browser === 'chrome' && navigator.userAgent.indexOf('Edg') < 0 && browserDetail.version >= 74) ||
+      browserDetail.browser === 'opera' && browserDetail.version >= 74) {
       result = true
     }
     return result
@@ -971,79 +971,79 @@
      * @param constraints
      */
   MediaDevice.prototype.getMedia = async function (data, constraints) {
-      log.warn('getMedia')
-      function onGetStreamSuccess (stream) {
-          log.info('get stream success constraints: ' + JSON.stringify(constraints, null, '  '))
-          data.callback({stream: stream ||data.stream})
-      }
+    log.warn('getMedia')
+    function onGetStreamSuccess(stream) {
+      log.info('get stream success constraints: ' + JSON.stringify(constraints, null, '  '))
+      data.callback({ stream: stream || data.stream })
+    }
 
-      function onGetStreamFailed (error) {
-          data.error = error
-          log.warn('get stream failed: ' + JSON.stringify(constraints, null, '  '))
-          log.warn('onGetStreamFailed: ' + error.message)
-          if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
-              // constraints can not be satisfied by avb.device
-              log.warn('constraints can not be satisfied by avb.device')
-              data.callback({ error: error, constraints: constraints})
-          } else {
-              if (error.name === 'NotFoundError' || error.name === 'DeviceNotFoundError') {
-                  // require track is missing
-                  log.warn('require track is missing')
-              } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-                  // webcam or mic are already in use
-                  log.warn('webcam or mic are already in use')
-              } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError' || error.name === 'PermissionDismissedError') {
-                  // permission denied in browser
-                  log.warn('permission denied in browser')
-              } else if (error.name === 'TypeError') {
-                  // empty constraints object
-                  log.warn('empty constraints object')
-              } else {
-                  // other errors
-                  log.warn('other errors ' + error.name)
-              }
-              data.callback({ error: error })
-          }
+    function onGetStreamFailed(error) {
+      data.error = error
+      log.warn('get stream failed: ' + JSON.stringify(constraints, null, '  '))
+      log.warn('onGetStreamFailed: ' + error.message)
+      if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+        // constraints can not be satisfied by avb.device
+        log.warn('constraints can not be satisfied by avb.device')
+        data.callback({ error: error, constraints: constraints })
+      } else {
+        if (error.name === 'NotFoundError' || error.name === 'DeviceNotFoundError') {
+          // require track is missing
+          log.warn('require track is missing')
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          // webcam or mic are already in use
+          log.warn('webcam or mic are already in use')
+        } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError' || error.name === 'PermissionDismissedError') {
+          // permission denied in browser
+          log.warn('permission denied in browser')
+        } else if (error.name === 'TypeError') {
+          // empty constraints object
+          log.warn('empty constraints object')
+        } else {
+          // other errors
+          log.warn('other errors ' + error.name)
+        }
+        data.callback({ error: error })
       }
+    }
 
-      if (data.streamType === 'audio' ) {
+    if (data.streamType === 'audio') {
+      navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
+    } else if (data.streamType === 'video') {
+      if (!data.isFirefox && data.stream && data.stream.getVideoTracks().length && data.stream.active) {
+        let videoTrack
+        let constraintsOfApply = {
+          width: { exact: constraints.video.width.exact },
+          height: { exact: constraints.video.height.exact },
+        }
+        videoTrack = data.stream.getVideoTracks()[0]
+        if (videoTrack && videoTrack.applyConstraints) {
+          log.info('applyConstraints constraints: ' + JSON.stringify(constraintsOfApply, null, '    '))
+          videoTrack.applyConstraints(constraintsOfApply).then(function () {
+            log.info('video applyConstraints success!')
+            data.callback({ stream: data.stream })
+          }).catch(onGetStreamFailed)
+        }
+      } else {
+        navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
+      }
+    } else if (data.streamType === 'screenShare') {
+      if (window.ipcRenderer) {
+        log.info('ipcRenderer getUserMedia for screen')
+        navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
+      } else {
+        if (navigator.getDisplayMedia) {
+          // for Edge old version
+          navigator.getDisplayMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
+        } else if (navigator.mediaDevices.getDisplayMedia) {
+          // for all supported getDisplayMedia browser versions
+          navigator.mediaDevices.getDisplayMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
+        } else if (navigator.mediaDevices.getUserMedia) {
           navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-      } else if(data.streamType === 'video'){
-          if (!data.isFirefox && data.stream && data.stream.getVideoTracks().length && data.stream.active) {
-              let videoTrack
-              let constraintsOfApply = {
-                  width:{exact: constraints.video.width.exact},
-                  height:{exact: constraints.video.height.exact},
-              }
-              videoTrack = data.stream.getVideoTracks()[0]
-              if (videoTrack && videoTrack.applyConstraints) {
-                  log.info('applyConstraints constraints: ' + JSON.stringify(constraintsOfApply, null, '    '))
-                  videoTrack.applyConstraints(constraintsOfApply).then(function(){
-                      log.info('video applyConstraints success!')
-                      data.callback({ stream: data.stream})
-                  }).catch(onGetStreamFailed)
-              }
-          }else{
-              navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-          }
-      } else if (data.streamType === 'screenShare') {
-          if(window.ipcRenderer){
-              log.info('ipcRenderer getUserMedia for screen')
-              navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-          }else {
-              if (navigator.getDisplayMedia) {
-                  // for Edge old version
-                  navigator.getDisplayMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-              } else if (navigator.mediaDevices.getDisplayMedia) {
-                  // for all supported getDisplayMedia browser versions
-                  navigator.mediaDevices.getDisplayMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-              } else if (navigator.mediaDevices.getUserMedia) {
-                  navigator.mediaDevices.getUserMedia(constraints).then(onGetStreamSuccess).catch(onGetStreamFailed)
-              } else {
-                  log.info('getDisplayMedia is not supported by current browser')
-              }
-          }
+        } else {
+          log.info('getDisplayMedia is not supported by current browser')
+        }
       }
+    }
   }
 
   /***

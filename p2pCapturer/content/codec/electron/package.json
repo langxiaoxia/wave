@@ -1,20 +1,15 @@
 {
-  "name": "share",
+  "name": "p2p_capturer",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron .",
-    "start-log": "electron . --enable-logging --v=0",
-    "start-logm": "electron . --enable-logging --vmodule=*/webrtc/*=1",
-    "start-gdi": "electron . --disable-features=DirectXCapturer",
-    "start-gdi-logm": "electron . --disable-features=DirectXCapturer --enable-logging --vmodule=*/webrtc/*=1"
+    "start": "electron ."
   },
   "keywords": [],
   "author": "xxlang",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^13.1.4"
+    "electron": "^13.6.3"
   }
 }

@@ -25,6 +25,7 @@ for build_arch in $build_archs; do
   rm -f $out_dir/gen/electron/electron_version.args
   rm -f $out_dir/gen/electron/electron_version.h
   rm -f $out_dir/dist.zip
+  touch $src_dir/build/dump_syms.py
   rm -f $out_dir/symbols.zip
   rm -fr $out_dir/breakpad_symbols
   rm -f $out_dir/dsym.zip

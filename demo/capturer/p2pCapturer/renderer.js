@@ -19,20 +19,33 @@ let peerDiv = document.querySelector('div#peer');
 let senderStatsDiv = document.querySelector('div#senderStats');
 let receiverStatsDiv = document.querySelector('div#receiverStats');
 
-let localVideo = document.querySelector('div#localVideo video');
-let remoteVideo = document.querySelector('div#remoteVideo video');
-let localVideoStatsDiv = document.querySelector('div#localVideo div');
-let remoteVideoStatsDiv = document.querySelector('div#remoteVideo div');
+let localCameraVideo = document.querySelector('div#localCamera video');
+let remoteCameraVideo = document.querySelector('div#remoteCamera video');
+let localCameraVideoStatsDiv = document.querySelector('div#localCamera div');
+let remoteCameraVideoStatsDiv = document.querySelector('div#remoteCamera div');
+
+let localScreenVideo = document.querySelector('div#localScreen video');
+let remoteScreenVideo = document.querySelector('div#remoteScreen video');
 
 let localPeerConnection;
 let remotePeerConnection;
-let localStream;
+let localCameraStream;
+let localScreenStream;
 let bytesPrev;
 let timestampPrev;
 let videoType = ''
 
 let selectObj = document.getElementById('rembAndTransportCC')
 let rembAndTransportCCEnabled = true
+
+function crashMain() {
+  ipcRenderer.invoke('CRASH_MAIN')
+}
+
+function crashRenderer() {
+  console.log('renderer process.crash()')
+  process.crash()
+}
 
 function getGpuFeatures() {
   console.dir(JSON.stringify(window.remote.app.getGPUFeatureStatus()))
@@ -61,7 +74,7 @@ function setXGoogleSelect() {
 
 function getVideoMedia() {
   console.info('getUserMedia start!');
-  closeStream()
+  closeCameraStream()
   let constraints = {
     audio: false,
     video: {
@@ -74,8 +87,8 @@ function getVideoMedia() {
   navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
     console.warn('getUserMedia success:', stream.id);
     connectButton.disabled = false;
-    localStream = stream;
-    localVideo.srcObject = stream;
+    localCameraStream = stream;
+    localCameraVideo.srcObject = stream;
     videoType = 'main'
   }).catch(function (e) {
     console.error(e)
@@ -102,7 +115,7 @@ async function getScreenCapture() {
 
 async function selectSource(source) {
   console.info('getUserMedia start!');
-  closeStream()
+  closeScreenStream()
   let constraints = {
     audio: false,
     video: {
@@ -119,8 +132,8 @@ async function selectSource(source) {
   navigator.mediaDevices.getUserMedia(constraints).then(function (stream) {
     console.warn('getUserMedia success:', stream.id);
     connectButton.disabled = false;
-    localStream = stream;
-    localVideo.srcObject = stream;
+    localScreenStream = stream;
+    localScreenVideo.srcObject = stream;
     videoType = 'slides'
   }).catch(function (e) {
     console.error(e)
@@ -128,10 +141,43 @@ async function selectSource(source) {
   });
 }
 
-function closeStream() {
-  console.log("clear stream first")
+function closeCameraStream() {
+  console.log("clear camera stream first")
   // clear first
-  let stream = localVideo.srcObject
+  let stream = localCameraVideo.srcObject
+  if (stream) {
+    try {
+      stream.oninactive = null;
+      let tracks = stream.getTracks();
+      for (let track in tracks) {
+        tracks[track].onended = null;
+        console.info("close camera stream");
+        tracks[track].stop();
+      }
+    }
+    catch (error) {
+      console.info('closeCameraStream: Failed to close stream');
+      console.error(error);
+    }
+    stream = null;
+    localCameraVideo.srcObject = null
+  }
+
+  if (localCameraStream) {
+    localCameraStream.getTracks().forEach(function (track) {
+      track.stop();
+    });
+    let videoTracks = localCameraStream.getVideoTracks();
+    for (let i = 0; i !== videoTracks.length; ++i) {
+      videoTracks[i].stop();
+    }
+  }
+}
+
+function closeScreenStream() {
+  console.log("clear screen stream first")
+  // clear first
+  let stream = localScreenVideo.srcObject
   if (stream) {
     try {
       stream.oninactive = null;
@@ -143,18 +189,18 @@ function closeStream() {
       }
     }
     catch (error) {
-      console.info('closeStream: Failed to close stream');
+      console.info('closeScreenStream: Failed to close stream');
       console.error(error);
     }
     stream = null;
-    localVideo.srcObject = null
+    localScreenVideo.srcObject = null
   }
 
-  if (localStream) {
-    localStream.getTracks().forEach(function (track) {
+  if (localScreenStream) {
+    localScreenStream.getTracks().forEach(function (track) {
       track.stop();
     });
-    let videoTracks = localStream.getVideoTracks();
+    let videoTracks = localScreenStream.getVideoTracks();
     for (let i = 0; i !== videoTracks.length; ++i) {
       videoTracks[i].stop();
     }
@@ -173,14 +219,23 @@ async function createPeerConnection() {
   localPeerConnection = new RTCPeerConnection(null);
   remotePeerConnection = new RTCPeerConnection(null);
 
-  if (localStream) {
-    localStream.getTracks().forEach(
+  if (localCameraStream) {
+    localCameraStream.getTracks().forEach(
       function (track) {
-        console.info("localPeerConnection addTack!");
-        localPeerConnection.addTrack(track, localStream);
+        console.info("localPeerConnection addTack for camera video!");
+        localPeerConnection.addTrack(track, localCameraStream);
       }
     );
   }
+
+  // if (localScreenStream) {
+  //   localScreenStream.getTracks().forEach(
+  //     function (track) {
+  //       console.info("localPeerConnection addTack for screen video!");
+  //       localPeerConnection.addTrack(track, localScreenStream);
+  //     }
+  //   );
+  // }
 
   console.info('localPeerConnection creating offer');
   localPeerConnection.onnegotiationeeded = function () {
@@ -199,9 +254,10 @@ async function createPeerConnection() {
   };
 
   remotePeerConnection.ontrack = function (e) {
-    if (remoteVideo.srcObject !== e.streams[0]) {
+    console.log(e.streams.length)
+    if (remoteCameraVideo.srcObject !== e.streams[0]) {
       console.info('remotePeerConnection got stream ' + e.streams[0].id);
-      remoteVideo.srcObject = e.streams[0];
+      remoteCameraVideo.srcObject = e.streams[0];
     }
   };
 
@@ -263,8 +319,10 @@ function hangup() {
     remotePeerConnection = null;
   });
 
-  localStream.getTracks().forEach(function (track) { track.stop(); });
-  localStream = null;
+  localCameraStream.getTracks().forEach(function (track) { track.stop(); });
+  localCameraStream = null;
+  localScreenStream.getTracks().forEach(function (track) { track.stop(); });
+  localScreenStream = null;
   hangupButton.disabled = true;
 
   clearInterval(statisticsInterval)
@@ -377,13 +435,13 @@ let statisticsInterval = setInterval(function () {
   } else {
   }
   // Collect some stats from the video tags.
-  if (localVideo.videoWidth) {
-    localVideoStatsDiv.innerHTML = '<strong>Video dimensions:</strong> ' +
-      localVideo.videoWidth + 'x' + localVideo.videoHeight + 'px';
+  if (localCameraVideo.videoWidth) {
+    localCameraVideoStatsDiv.innerHTML = '<strong>Video dimensions:</strong> ' +
+      localCameraVideo.videoWidth + 'x' + localCameraVideo.videoHeight + 'px';
   }
-  if (remoteVideo.videoWidth) {
-    remoteVideoStatsDiv.innerHTML = '<strong>Video dimensions:</strong> ' +
-      remoteVideo.videoWidth + 'x' + remoteVideo.videoHeight + 'px';
+  if (remoteCameraVideo.videoWidth) {
+    remoteCameraVideoStatsDiv.innerHTML = '<strong>Video dimensions:</strong> ' +
+      remoteCameraVideo.videoWidth + 'x' + remoteCameraVideo.videoHeight + 'px';
   }
 }, 1000);
 

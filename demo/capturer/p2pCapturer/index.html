@@ -55,34 +55,46 @@
     </section>
 
     <div>
-      <button id="features" onclick="getGpuFeatures()">features</button>
-      <button id="info" onclick="getGpuInfo()">info</button>
+      <button id="crash_main" onclick="crashMain()">main crash</button>
+      <button id="crash_renderer" onclick="crashRenderer()">renderer crash</button>
     </div>
     <div>
-      <button id="camera" onclick="getVideoMedia()">camera</button>
-      <button id="desktop" onclick="getScreenCapture()">desktop</button>
+      <button id="features" onclick="getGpuFeatures()">gpu features</button>
+      <button id="info" onclick="getGpuInfo()">gpu info</button>
     </div>
     <div>
-      <button id="connect" onclick="createPeerConnection()">连接</button>
-      <button id="hangup" disabled onclick="hangup()">挂断</button>
+      <button id="camera" onclick="getVideoMedia()">share camera</button>
+      <button id="desktop" onclick="getScreenCapture()">share desktop</button>
+    </div>
+    <div>
+      <button id="connect" onclick="createPeerConnection()">connect</button>
+      <button id="hangup" disabled onclick="hangup()">hangup</button>
     </div>
 
     <section id="video">
-      <div id="localVideo">
-        <h2>localVideo</h2>
+      <div id="localCamera">
+        <h2>Local Camera</h2>
         <video playsinline autoplay muted></video>
         <div></div>
         <div id="local_framesPerSecond"></div>
         <div id="send_packetsLost"></div>
       </div>
-      <div id="remoteVideo">
-        <h2>remoteVideo</h2>
+      <div id="remoteCamera">
+        <h2>Remote Camera</h2>
         <video playsinline autoplay muted></video>
         <div></div>
         <div id="remote_framesPerSecond"></div>
         <div id="recv_packetsLost"></div>
         <div id="bitrate"></div>
         <div id="peer"></div>
+      </div>
+      <div id="localScreen">
+        <h2>Local Screen</h2>
+        <video playsinline autoplay muted></video>
+      </div>
+      <div id="remoteScreen">
+        <h2>Remote Screen</h2>
+        <video playsinline autoplay muted></video>
       </div>
     </section>
 

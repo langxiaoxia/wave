@@ -1,0 +1,18 @@
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>wave_updater</title>
+	</head>
+	<body>
+		<h1>wave_updater</h1>
+		We are using Node.js <span id="node-version"></span>,
+		Chromium <span id="chrome-version"></span>,
+		and Electron <span id="electron-version"></span>.<hr>
+
+		<p>Send Once: <input type="checkbox" id="send_once"></p>
+    <button id="start-button" onclick="startSend()">Start</button>
+    <button id="stop-button" onclick="stopSend()">Stop</button>
+
+		<script src="./renderer.js"></script>
+	</body>
+</html>

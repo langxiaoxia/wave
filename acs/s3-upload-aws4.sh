@@ -56,11 +56,11 @@ awsStringSign4() {
 
 
 if [ -z "${AWS_ACCESS_KEY_ID:-}" ]; then
-  >&2 echo 'AWS_ACCESS_KEY_ID envvars not set.'
+  >&2 echo '! AWS_ACCESS_KEY_ID envvars not set.'
   exit 1
 fi
 if [ -z "${AWS_SECRET_ACCESS_KEY:-}" ]; then
-  >&2 echo 'AWS_SECRET_ACCESS_KEY envvars not set.'
+  >&2 echo '! AWS_SECRET_ACCESS_KEY envvars not set.'
   exit 1
 fi
 awsAccess="${AWS_ACCESS_KEY_ID}"
@@ -84,17 +84,12 @@ else
 fi
 dateNow=$(date -d now +%s)
 fullUrl="${endpointUrl}${prefix}/$(date -u -d @${dateNow} +'%Y/%m/%d/%H/%M/%S.ts')"
-echo "fullUrl=$fullUrl"
 
 hostport="$(printf '%s' "${fullUrl}" | sed -E -e 's|^https?://||g' -e 's|/.*$||')"
-echo "hostport=$hostport"
 pathRemote="$(printf '%s' "${fullUrl}" | sed -E 's|^https?://||g' | grep -o -E '/.*$' | cut -c 2-)"
-echo "pathRemote=$pathRemote"
 
 dateValueS="$(date -u -d @${dateNow} +'%Y%m%d')"
-echo "dateValueS=$dateValueS"
 dateValueL="$(date -u -d @${dateNow} +'%Y%m%dT%H%M%SZ')"
-echo "dateValueL=$dateValueL"
 
 if command -v file >/dev/null 2>&1; then
   contentType="$(file --brief --mime-type "${fileLocal}")"
@@ -138,14 +133,17 @@ ${canonicalRequestHash}"
 
 # 3. Sign the string
 signature=$(awsStringSign4 "${awsSecret}" "${dateValueS}" "${region}" "${service}" "${stringToSign}")
-echo "signature=$signature"
 
 # 4. Upload the file
-if [ "${AWS_UPLOAD:-0}" -ne 1 ]; then
-  >&2 echo 'AWS_UPLOAD envvars not set to 1.'
+if [ "${AWS_UPLOAD:-0}" -lt 1 ]; then
+  >&2 echo '! AWS_UPLOAD envvars not set or less than 1.'
   exit 1
+elif [ "${AWS_UPLOAD:-0}" -gt 1 ]; then
+  logLevel="--verbose"
+else
+  logLevel="--silent"
 fi
-curl --silent --location --proto-redir =https --request "${httpReq}" --upload-file "${fileLocal}" \
+curl ${logLevel} --location --proto-redir =https --request "${httpReq}" --upload-file "${fileLocal}" \
   --header "Content-Type: ${contentType}" \
   --header "Host: ${hostport}" \
   --header "X-Amz-Content-SHA256: ${payloadHash}" \
@@ -154,4 +152,4 @@ curl --silent --location --proto-redir =https --request "${httpReq}" --upload-fi
   --header "Authorization: ${authType} Credential=${awsAccess}/${dateValueS}/${region}/${service}/aws4_request, SignedHeaders=${headerList}, Signature=${signature}" \
   "${fullUrl}"
 
-echo "! Uploaded"
+>&2 echo "! Uploaded"
